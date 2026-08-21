@@ -139,6 +139,15 @@ function requestResetSubscription(templateId: string) {
   });
 }
 
+function showSubscriptionSettingsGuide() {
+  uni.showModal({
+    title: "提醒暂未开启",
+    content: "可再次点击订阅按钮重新选择。若此前勾选过“总是保持以上选择”，请点右上角「…」→「设置」→「订阅消息」，开启本小程序的提醒后再回来订阅。",
+    showCancel: false,
+    confirmText: "我知道了",
+  });
+}
+
 export function useCodexWatch() {
   const posts = ref<WatchPost[]>([]);
   const forecast = ref<ResetForecast | null>(null);
@@ -251,7 +260,7 @@ export function useCodexWatch() {
       const templateId = reminderTemplateId.value;
       const permission = await requestResetSubscription(templateId);
       if (permission[templateId] !== "accept") {
-        uni.showToast({ title: "你没有同意本次提醒", icon: "none" });
+        showSubscriptionSettingsGuide();
         return;
       }
       const login = await uni.login({ provider: "weixin" });
