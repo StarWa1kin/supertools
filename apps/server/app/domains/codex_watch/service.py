@@ -1,6 +1,7 @@
 import httpx
 
 from app.core.config import get_settings
+from app.domains.codex_watch.reminders import reminder_is_configured
 from app.domains.codex_watch.schemas import PublicCodexWatchConfig, WatchPostList
 from app.domains.codex_watch.source import CodexResetSource
 from app.domains.codex_watch.store import CodexWatchConfigStore
@@ -39,9 +40,7 @@ class CodexWatchService:
     async def get_public_config(self) -> PublicCodexWatchConfig:
         config = await self.store.load()
         community = config.community if config.community and config.community.qr_code else None
-        reminder_enabled = bool(
-            config.reminder.enabled and config.reminder.template_id
-        )
+        reminder_enabled = reminder_is_configured(config.reminder)
         return PublicCodexWatchConfig(
             tutorials=config.tutorials,
             community=community,

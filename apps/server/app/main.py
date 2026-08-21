@@ -1,3 +1,4 @@
+import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -43,18 +44,23 @@ async def capture_request_log(request: Request, call_next):
     started_at = perf_counter()
     response = await call_next(request)
     if request.url.path != "/api/v1/admin/request-logs":
-        forwarded_for = request.headers.get("x-forwarded-for", "")
-        client_ip = request.client.host if request.client else "unknown"
-        if settings.request_log_trust_proxy_headers and forwarded_for:
-            client_ip = forwarded_for.split(",", 1)[0].strip()
-        get_request_log_store(settings).add(
-            client_ip=client_ip,
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            duration_ms=round((perf_counter() - started_at) * 1000),
-            user_agent=request.headers.get("user-agent", ""),
-        )
+        try:
+            forwarded_for = request.headers.get("x-forwarded-for", "")
+            client_ip = request.client.host if request.client else "unknown"
+            if settings.request_log_trust_proxy_headers and forwarded_for:
+                client_ip = forwarded_for.split(",", 1)[0].strip()
+            get_request_log_store(settings).add(
+                client_ip=client_ip,
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration_ms=round((perf_counter() - started_at) * 1000),
+                user_agent=request.headers.get("user-agent", ""),
+            )
+        except (OSError, sqlite3.Error):
+            # Request logging is diagnostic only. A full, locked, or unavailable
+            # log store must never replace an otherwise valid API response with 500.
+            pass
     return response
 
 

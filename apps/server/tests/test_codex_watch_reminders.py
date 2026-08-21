@@ -11,6 +11,7 @@ from app.domains.codex_watch.schemas import (
     ReminderConfig,
     WatchPost,
 )
+from app.domains.codex_watch.service import CodexWatchService
 from app.domains.codex_watch.store import CodexWatchConfigStore
 
 
@@ -101,6 +102,31 @@ def test_empty_secret_preserves_the_existing_reminder_secret(tmp_path: Path) -> 
 
         assert saved.reminder.enabled is True
         assert saved.reminder.app_secret == "kept-secret"
+
+    asyncio.run(scenario())
+
+
+def test_public_config_hides_reminders_when_the_app_secret_is_missing(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        store = CodexWatchConfigStore(
+            tmp_path,
+            CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"])),
+        )
+        await store.save(
+            CodexWatchConfig(
+                crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+                reminder=ReminderConfig(
+                    enabled=True,
+                    app_id="wx-test",
+                    template_id="template-1",
+                ),
+            )
+        )
+
+        public_config = await CodexWatchService(store).get_public_config()
+
+        assert public_config.reminder_enabled is False
+        assert public_config.reminder_template_id is None
 
     asyncio.run(scenario())
 

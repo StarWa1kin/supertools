@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+import app.main as main_module
 from app.admin.deployment import get_deployment_service
 from app.admin.request_logs import RequestLogStore, iter_request_log_store
 from app.core.config import get_settings
@@ -13,6 +14,20 @@ from app.domains.codex_watch.store import (
 from app.main import app
 
 client = TestClient(app)
+
+
+def test_request_log_failure_does_not_replace_the_api_response(monkeypatch) -> None:
+    def unavailable_log_store(*_args, **_kwargs):
+        raise OSError("request log volume is unavailable")
+
+    monkeypatch.setattr(main_module, "get_request_log_store", unavailable_log_store)
+
+    response = client.get("/api/v1/codex-watch/subscriptions")
+
+    assert response.status_code == 405
+    assert response.json()["detail"] == (
+        "此地址仅支持订阅提交，不能直接打开。请在微信小程序中点击“订阅重置提醒”。"
+    )
 
 
 def test_admin_login_rejects_invalid_credentials() -> None:
