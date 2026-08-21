@@ -7,6 +7,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    # Lets outbound Python requests reach a proxy running on the Docker host.
+    # Use host.docker.internal (not 127.0.0.1) in HTTP(S)_PROXY.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - supertools-data:/var/lib/supertools
     ports:

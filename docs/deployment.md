@@ -23,6 +23,23 @@ nano .env.production
 
 必须修改 `ADMIN_PASSWORD`、`ADMIN_TOKEN_SECRET`、`DEPLOY_SERVICE_TOKEN` 和 `VIDEO_MEDIA_SIGNING_SECRET`。`DEPLOY_SERVICE_TOKEN` 建议使用独立的 32 字节以上随机值，不能与管理员令牌密钥复用。私有 SSH 仓库还需将 `DEPLOY_SSH_DIR` 指向宿主机部署账号的 `.ssh` 目录，其中应包含只读部署密钥和 `known_hosts`。`APP_CORS_ORIGINS` 需要包含 `https://admin.devhooks.cn`。不要把 `.env.production` 提交到 Git。
 
+### 出站代理（可选）
+
+若服务器无法直连 Cloudflare 或视频平台，可在宿主机运行 Mihomo/Clash，并在 `.env.production` 增加：
+
+```ini
+HTTP_PROXY=http://host.docker.internal:7890
+HTTPS_PROXY=http://host.docker.internal:7890
+NO_PROXY=localhost,127.0.0.1,deployer
+```
+
+`server` 容器已将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向 API 容器自身。Python 的 HTTP 客户端会自动读取这些标准环境变量。修改后重新创建 API 容器：
+
+```bash
+docker compose --env-file .env.production up -d --force-recreate server
+docker compose --env-file .env.production exec server python -c "import httpx; print(httpx.get('https://codex-reset.com', timeout=10).status_code)"
+```
+
 启动并检查：
 
 ```bash
