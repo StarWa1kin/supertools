@@ -68,17 +68,11 @@ API 和管理端默认仅监听服务器回环地址。将 `infra/nginx/sites/su
 
 仓库中的 Nginx 配置默认读取 `/etc/nginx/ssl/wildcard.devhooks.cn.pem` 和 `/etc/nginx/ssl/wildcard.devhooks.cn.key`。证书必须覆盖 `*.devhooks.cn`；如果服务器使用其他证书路径，需要同步修改配置。安装配置后先执行 `nginx -t`，成功后再 reload。
 
-### 旧宿主机的管理端构建兼容方案
+### 旧宿主机的管理端构建兼容
 
-部分 CentOS 7/旧 overlay 文件系统会在 Docker 构建层中运行 pnpm 时出现 `EPERM` 或 SQLite `disk I/O error`。此时在开发机生成管理端静态产物，将 `apps/admin/dist/` 同步到服务器相同路径，然后只构建 Nginx 运行时镜像：
+Admin Dockerfile 会在临时内存文件系统中安装依赖和构建静态文件，避免部分 CentOS 7/旧 overlay 文件系统中的 `EPERM` 或 SQLite `disk I/O error`。因此仍使用标准 Compose 命令即可。若配置了 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY`，这些变量也会自动传入 Admin 构建阶段，用于下载 npm 依赖。
 
-```bash
-VITE_API_BASE_URL=https://api.devhooks.cn pnpm --dir apps/admin build
-docker build -f apps/admin/Dockerfile.runtime -t supertools-admin:latest .
-docker compose --env-file .env.production up -d --no-build
-```
-
-`dist/` 是部署产物，不应提交到仓库。常规 Linux 环境仍使用前面的 Compose 多阶段构建流程。
+`dist/` 是部署产物，不应提交到仓库。
 
 ## 更新与回滚
 
