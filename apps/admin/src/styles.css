@@ -425,6 +425,11 @@ button:not(:disabled):active, .el-button:not(.is-disabled):active { transform: s
 .upload-button { width: 182px; }
 .upload-hint { margin: 10px 0 0; color: #98989d; text-align: center; font-size: 9px; }
 .reminder-guide { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding: 14px 16px; color: #0754c6; background: #eaf2ff; border-radius: 8px; }
+.reminder-settings-panel { max-width: 760px; }
+.setting-row--switch { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 0 0 18px; border-bottom: 1px solid rgb(60 60 67 / 10%); }
+.setting-row--switch b, .setting-row--switch span { display: block; }
+.setting-row--switch b { font-size: 13px; font-weight: 650; }
+.setting-row--switch span { margin-top: 5px; color: #697386; font-size: 11px; }
 .reminder-guide > svg { flex: 0 0 18px; width: 18px; height: 18px; }
 .reminder-guide b, .reminder-guide span { display: block; }
 .reminder-guide b { font-size: 11px; font-weight: 620; }

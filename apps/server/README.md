@@ -19,10 +19,7 @@ Codex 情报管理接口：
 - `GET /api/v1/codex-watch/config`：小程序使用的公开展示配置。
 - `POST /api/v1/codex-watch/subscriptions`：使用 `wx.login` code 登记一次微信重置提醒。
 
-微信订阅消息默认关闭。配置 `WECHAT_REMINDER_ENABLED=true`、小程序
-`WECHAT_APP_ID`、`WECHAT_APP_SECRET` 和 `WECHAT_RESET_TEMPLATE_ID` 后启用；模板字段名通过
-`WECHAT_TEMPLATE_STATUS_KEY`、`WECHAT_TEMPLATE_TIME_KEY`、
-`WECHAT_TEMPLATE_REMARK_KEY` 与微信后台模板保持一致。普通订阅每成功发送一次消耗一次授权。
+微信订阅消息默认关闭。在管理后台的“提醒配置”页填写小程序 AppID、AppSecret、订阅消息模板 ID 并启用即可；配置持久化在服务端数据卷中，AppSecret 不会回传至浏览器。普通订阅每成功发送一次消耗一次授权。
 
 后台接口统一放在 `app/admin/`，并通过 `app/admin/router.py` 聚合。新增后台业务时，
 在该目录创建对应路由模块并挂载到聚合路由，避免后台接口混入公开领域路由。

@@ -11,8 +11,8 @@ from uuid import uuid4
 import httpx
 from pydantic import BaseModel, Field
 
-from app.core.config import Settings, get_settings
-from app.domains.codex_watch.schemas import WatchPost
+from app.core.config import get_settings
+from app.domains.codex_watch.schemas import ReminderConfig, WatchPost
 from app.domains.codex_watch.source import CodexResetSource
 from app.domains.codex_watch.store import get_codex_watch_store
 
@@ -124,7 +124,7 @@ class ReminderStore:
 
 class WechatClient:
     def __init__(
-        self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None
+        self, settings: ReminderConfig, transport: httpx.AsyncBaseTransport | None = None
     ) -> None:
         self.settings = settings
         self._transport = transport
@@ -137,8 +137,8 @@ class WechatClient:
             "GET",
             "/sns/jscode2session",
             params={
-                "appid": self.settings.wechat_app_id,
-                "secret": self.settings.wechat_app_secret,
+                "appid": self.settings.app_id,
+                "secret": self.settings.app_secret,
                 "js_code": code,
                 "grant_type": "authorization_code",
             },
@@ -164,19 +164,19 @@ class WechatClient:
             json={
                 "touser": subscription.openid,
                 "template_id": subscription.template_id,
-                "page": settings.wechat_reset_page,
+                "page": settings.page,
                 "miniprogram_state": "formal",
                 "lang": "zh_CN",
                 "data": {
-                    settings.wechat_template_status_key: {
+                    settings.status_key: {
                         "value": "【测试】Codex 全局额度已重置"
                         if is_test
                         else "Codex 全局额度已重置"
                     },
-                    settings.wechat_template_time_key: {
+                    settings.time_key: {
                         "value": event.published_at.astimezone().strftime("%Y-%m-%d %H:%M")
                     },
-                    settings.wechat_template_remark_key: {
+                    settings.remark_key: {
                         "value": "这是管理员发起的测试消息" if is_test else "打开小程序查看适用范围"
                     },
                 },
@@ -192,8 +192,8 @@ class WechatClient:
                 "/cgi-bin/token",
                 params={
                     "grant_type": "client_credential",
-                    "appid": self.settings.wechat_app_id,
-                    "secret": self.settings.wechat_app_secret,
+                    "appid": self.settings.app_id,
+                    "secret": self.settings.app_secret,
                 },
             )
             token = payload.get("access_token")
@@ -223,12 +223,12 @@ class WechatClient:
         return payload
 
 
-def reminder_is_configured(settings: Settings) -> bool:
+def reminder_is_configured(settings: ReminderConfig) -> bool:
     return bool(
-        settings.wechat_reminder_enabled
-        and settings.wechat_app_id
-        and settings.wechat_app_secret
-        and settings.wechat_reset_template_id
+        settings.enabled
+        and settings.app_id
+        and settings.app_secret
+        and settings.template_id
     )
 
 
@@ -237,14 +237,12 @@ def get_reminder_store() -> ReminderStore:
     return ReminderStore(get_settings().codex_watch_data_dir)
 
 
-@lru_cache
-def get_wechat_client() -> WechatClient:
-    return WechatClient(get_settings())
-
-
 async def dispatch_confirmed_reset(event: WatchPost) -> int:
+    config = await get_codex_watch_store().load()
+    if not reminder_is_configured(config.reminder):
+        return 0
     store = get_reminder_store()
-    client = get_wechat_client()
+    client = WechatClient(config.reminder)
     sent = 0
     for subscription in await store.active_for(event):
         try:
@@ -262,6 +260,9 @@ async def dispatch_test_reset(subscription_id: str) -> ReminderSubscription | No
     A WeChat subscription message authorization is one-time.  The test therefore
     follows the same send-and-consume semantics as a production reset alert.
     """
+    config = await get_codex_watch_store().load()
+    if not reminder_is_configured(config.reminder):
+        return None
     store = get_reminder_store()
     subscription = await store.get_by_id(subscription_id)
     if subscription is None or subscription.remaining_deliveries <= 0:
@@ -276,7 +277,7 @@ async def dispatch_test_reset(subscription_id: str) -> ReminderSubscription | No
         matched_keywords=["test"],
         event_type="reset",
     )
-    await get_wechat_client().send_reset(subscription, event, is_test=True)
+    await WechatClient(config.reminder).send_reset(subscription, event, is_test=True)
     await store.mark_sent(subscription.openid, subscription.template_id, event.id)
     return await store.get_by_id(subscription_id)
 
@@ -301,7 +302,7 @@ async def _monitor_loop() -> None:
     )
     while True:
         config = await get_codex_watch_store().load()
-        if config.crawler.schedule_enabled:
+        if config.crawler.schedule_enabled and reminder_is_configured(config.reminder):
             try:
                 posts, _, _ = await source.fetch(config.crawler.keywords)
                 event = latest_confirmed_reset(posts)
@@ -317,7 +318,7 @@ _monitor_task: asyncio.Task[None] | None = None
 
 def start_reminder_monitor() -> None:
     global _monitor_task
-    if reminder_is_configured(get_settings()) and _monitor_task is None:
+    if _monitor_task is None:
         _monitor_task = asyncio.create_task(_monitor_loop(), name="codex-reset-reminders")
 
 

@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
-from app.domains.codex_watch.schemas import CodexWatchConfig, CrawlerConfig
+from app.domains.codex_watch.schemas import CodexWatchConfig, CrawlerConfig, ReminderConfig
 
 
 class CodexWatchConfigStore:
@@ -20,6 +20,17 @@ class CodexWatchConfigStore:
             return await asyncio.to_thread(self._read)
 
     async def save(self, config: CodexWatchConfig) -> CodexWatchConfig:
+        # The admin API intentionally never returns the AppSecret. An empty value
+        # therefore means "keep the existing secret", not "erase it".
+        if not config.reminder.app_secret:
+            current = await self.load()
+            config = config.model_copy(
+                update={
+                    "reminder": config.reminder.model_copy(
+                        update={"app_secret": current.reminder.app_secret}
+                    )
+                }
+            )
         saved = config.model_copy(update={"updated_at": datetime.now(UTC)})
         async with self._lock:
             await asyncio.to_thread(self._write, saved)
@@ -53,6 +64,7 @@ def build_default_config(settings: Settings) -> CodexWatchConfig:
         ),
         tutorials=[],
         community=None,
+        reminder=ReminderConfig(),
     )
 
 

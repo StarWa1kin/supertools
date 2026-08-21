@@ -97,10 +97,22 @@ class CommunityConfig(ApiModel):
         raise ValueError("二维码必须是图片或 http(s) 地址")
 
 
+class ReminderConfig(ApiModel):
+    enabled: bool = False
+    app_id: str = Field(default="", max_length=128)
+    app_secret: str = Field(default="", max_length=256)
+    template_id: str = Field(default="", max_length=256)
+    page: str = Field(default="pages/codex-watch/index", max_length=256)
+    status_key: str = Field(default="thing1", max_length=64)
+    time_key: str = Field(default="time3", max_length=64)
+    remark_key: str = Field(default="thing5", max_length=64)
+
+
 class CodexWatchConfig(ApiModel):
     crawler: CrawlerConfig
     tutorials: list[TutorialConfig] = Field(default_factory=list, max_length=20)
     community: CommunityConfig | None = None
+    reminder: ReminderConfig = Field(default_factory=ReminderConfig)
     updated_at: datetime | None = None
 
 

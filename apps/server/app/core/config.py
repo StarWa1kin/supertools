@@ -50,14 +50,6 @@ class Settings(BaseSettings):
         gt=0,
         le=30,
     )
-    wechat_reminder_enabled: bool = Field(default=False, alias="WECHAT_REMINDER_ENABLED")
-    wechat_app_id: str = Field(default="", alias="WECHAT_APP_ID")
-    wechat_app_secret: str = Field(default="", alias="WECHAT_APP_SECRET")
-    wechat_reset_template_id: str = Field(default="", alias="WECHAT_RESET_TEMPLATE_ID")
-    wechat_reset_page: str = Field(default="pages/codex-watch/index", alias="WECHAT_RESET_PAGE")
-    wechat_template_status_key: str = Field(default="thing1", alias="WECHAT_TEMPLATE_STATUS_KEY")
-    wechat_template_time_key: str = Field(default="time3", alias="WECHAT_TEMPLATE_TIME_KEY")
-    wechat_template_remark_key: str = Field(default="thing5", alias="WECHAT_TEMPLATE_REMARK_KEY")
     admin_username: str = Field(default="admin", alias="ADMIN_USERNAME")
     admin_password: str = Field(default="come2u", alias="ADMIN_PASSWORD")
     admin_token_secret: str = Field(

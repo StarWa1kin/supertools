@@ -19,10 +19,22 @@ export interface CommunityConfig {
   qrCode: string;
 }
 
+export interface ReminderConfig {
+  enabled: boolean;
+  appId: string;
+  appSecret: string;
+  templateId: string;
+  page: string;
+  statusKey: string;
+  timeKey: string;
+  remarkKey: string;
+}
+
 export interface CodexWatchConfig {
   crawler: CrawlerConfig;
   tutorials: TutorialConfig[];
   community: CommunityConfig | null;
+  reminder: ReminderConfig;
   updatedAt: string | null;
 }
 

@@ -133,6 +133,12 @@ def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Pat
                 "description": "交流 AI 实战",
                 "qrCode": "",
             },
+            "reminder": {
+                "enabled": True,
+                "appId": "wx-test",
+                "appSecret": "secret-not-for-browser",
+                "templateId": "template-1",
+            },
             "updatedAt": None,
         }
 
@@ -141,9 +147,11 @@ def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Pat
         assert saved.json()["crawler"]["account"] == "thsottiaux"
         assert saved.json()["crawler"]["keywords"] == ["codex", "reset"]
         assert saved.json()["updatedAt"] is not None
+        assert saved.json()["reminder"]["appSecret"] == ""
 
         reloaded = client.get("/api/v1/admin/codex-watch/config", headers=headers)
         assert reloaded.json()["crawler"]["intervalMinutes"] == 15
+        assert reloaded.json()["reminder"]["appSecret"] == ""
         assert (tmp_path / "config.json").exists()
 
         public_config = client.get("/api/v1/codex-watch/config")

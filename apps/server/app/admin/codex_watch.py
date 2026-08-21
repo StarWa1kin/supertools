@@ -5,13 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.admin.auth import require_admin
 from app.admin.schemas import ReminderSubscriptionSummary, ReminderTestResponse
-from app.core.config import get_settings
 from app.domains.codex_watch.reminders import (
     ReminderSubscription,
     WechatApiError,
     dispatch_test_reset,
     get_reminder_store,
-    reminder_is_configured,
 )
 from app.domains.codex_watch.schemas import CodexWatchConfig
 from app.domains.codex_watch.store import CodexWatchConfigStore, get_codex_watch_store
@@ -32,12 +30,17 @@ def subscription_summary(subscription: ReminderSubscription) -> ReminderSubscrip
     )
 
 
+def redact_reminder_secret(config: CodexWatchConfig) -> CodexWatchConfig:
+    reminder = config.reminder.model_copy(update={"app_secret": ""})
+    return config.model_copy(update={"reminder": reminder})
+
+
 @router.get("/config", response_model=CodexWatchConfig)
 async def get_config(
     store: Annotated[CodexWatchConfigStore, Depends(get_codex_watch_store)],
     _admin: Annotated[str, Depends(require_admin)],
 ) -> CodexWatchConfig:
-    return await store.load()
+    return redact_reminder_secret(await store.load())
 
 
 @router.put("/config", response_model=CodexWatchConfig)
@@ -46,7 +49,7 @@ async def update_config(
     store: Annotated[CodexWatchConfigStore, Depends(get_codex_watch_store)],
     _admin: Annotated[str, Depends(require_admin)],
 ) -> CodexWatchConfig:
-    return await store.save(config)
+    return redact_reminder_secret(await store.save(config))
 
 
 @router.get("/reminder-subscriptions", response_model=list[ReminderSubscriptionSummary])
@@ -62,8 +65,6 @@ async def test_reminder_subscription(
     subscription_id: str,
     _admin: Annotated[str, Depends(require_admin)],
 ) -> ReminderTestResponse:
-    if not reminder_is_configured(get_settings()):
-        raise HTTPException(status_code=503, detail="微信重置提醒尚未配置")
     try:
         subscription = await dispatch_test_reset(subscription_id)
     except (WechatApiError, httpx.HTTPError) as exc:

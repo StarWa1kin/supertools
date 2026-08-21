@@ -38,14 +38,13 @@ class CodexWatchService:
 
     async def get_public_config(self) -> PublicCodexWatchConfig:
         config = await self.store.load()
-        settings = get_settings()
         community = config.community if config.community and config.community.qr_code else None
         reminder_enabled = bool(
-            settings.wechat_reminder_enabled and settings.wechat_reset_template_id
+            config.reminder.enabled and config.reminder.template_id
         )
         return PublicCodexWatchConfig(
             tutorials=config.tutorials,
             community=community,
             reminder_enabled=reminder_enabled,
-            reminder_template_id=(settings.wechat_reset_template_id if reminder_enabled else None),
+            reminder_template_id=(config.reminder.template_id if reminder_enabled else None),
         )

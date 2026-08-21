@@ -63,7 +63,7 @@ const emit = defineEmits<{
   refreshRequestLogs: [query?: RequestLogQuery];
 }>();
 
-type SectionId = "crawler" | "tutorials" | "community" | "reminders" | "deployment" | "logs";
+type SectionId = "crawler" | "tutorials" | "community" | "reminder-settings" | "reminders" | "deployment" | "logs";
 const route = useRoute();
 const router = useRouter();
 const keywordInput = ref("");
@@ -76,6 +76,7 @@ const intelligenceSections = [
   { id: "crawler" as const, label: "采集策略", caption: "Crawler", icon: Setting },
   { id: "tutorials" as const, label: "AI 教程", caption: "Tutorials", icon: Reading },
   { id: "community" as const, label: "交流群", caption: "Community", icon: ChatLineRound },
+  { id: "reminder-settings" as const, label: "提醒配置", caption: "WeChat", icon: Bell },
 ];
 const operationsSections = [
   { id: "reminders" as const, label: "推送测试", caption: "Reminders", icon: Bell },
@@ -90,7 +91,7 @@ const communityVisible = computed(() => Boolean(props.config.community?.qrCode))
 const isOperations = computed(() => operationsSections.some((item) => item.id === activeSection.value));
 
 function selectSection(section: SectionId) {
-  router.push(section === "crawler" ? "/codex-watch/crawler" : section === "tutorials" ? "/codex-watch/tutorials" : section === "community" ? "/codex-watch/community" : section === "reminders" ? "/ops/reminders" : section === "logs" ? "/ops/request-logs" : "/ops/deployment");
+  router.push(section === "crawler" ? "/codex-watch/crawler" : section === "tutorials" ? "/codex-watch/tutorials" : section === "community" ? "/codex-watch/community" : section === "reminder-settings" ? "/codex-watch/reminder-settings" : section === "reminders" ? "/ops/reminders" : section === "logs" ? "/ops/request-logs" : "/ops/deployment");
   if (section === "logs") refreshRequestLogs();
 }
 
@@ -501,6 +502,40 @@ async function confirmReminderTest(subscription: ReminderSubscription) {
           <p>小程序当前不会显示社群相关内容。</p>
           <el-button :icon="Plus" @click="emit('enableCommunity')">启用交流群配置</el-button>
         </div>
+      </section>
+
+      <section v-show="activeSection === 'reminder-settings'" class="workspace-section">
+        <div class="section-intro">
+          <div>
+            <span class="section-number">04</span>
+            <h2 class="section-title">微信订阅提醒</h2>
+            <p class="section-copy">凭据安全保存在服务端持久化配置中。启用后无需重启，下一轮监控将自动生效。</p>
+          </div>
+          <div :class="['status-pill', { 'status-pill--paused': !config.reminder.enabled }]">
+            <i />{{ config.reminder.enabled ? "提醒已启用" : "提醒未启用" }}
+          </div>
+        </div>
+
+        <div class="panel-surface config-panel reminder-settings-panel">
+          <div class="setting-row setting-row--switch">
+            <div><b>启用微信订阅消息</b><span>关闭后小程序不再开放订阅，后台也暂停推送。</span></div>
+            <el-switch v-model="config.reminder.enabled" />
+          </div>
+          <el-form label-position="top">
+            <div class="tutorial-main-fields">
+              <el-form-item label="小程序 AppID"><el-input v-model="config.reminder.appId" maxlength="128" placeholder="wx..." /></el-form-item>
+              <el-form-item label="订阅消息模板 ID"><el-input v-model="config.reminder.templateId" maxlength="256" placeholder="微信公众平台的模板 ID" /></el-form-item>
+            </div>
+            <el-form-item label="小程序 AppSecret"><el-input v-model="config.reminder.appSecret" type="password" show-password maxlength="256" placeholder="留空并保存可保留服务端已有密钥" /></el-form-item>
+            <el-form-item label="消息点击后打开的页面"><el-input v-model="config.reminder.page" maxlength="256" placeholder="pages/codex-watch/index" /></el-form-item>
+            <div class="tutorial-main-fields">
+              <el-form-item label="状态字段键"><el-input v-model="config.reminder.statusKey" maxlength="64" placeholder="thing1" /></el-form-item>
+              <el-form-item label="时间字段键"><el-input v-model="config.reminder.timeKey" maxlength="64" placeholder="time3" /></el-form-item>
+            </div>
+            <el-form-item label="备注字段键"><el-input v-model="config.reminder.remarkKey" maxlength="64" placeholder="thing5" /></el-form-item>
+          </el-form>
+        </div>
+        <div class="reminder-guide"><Lock /><div><b>密钥不会回传到浏览器</b><span>页面再次打开时 AppSecret 始终为空；不填写即保存不会清除已经配置的密钥。</span></div></div>
       </section>
 
       <section v-show="activeSection === 'deployment'" class="workspace-section">

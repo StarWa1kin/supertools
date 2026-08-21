@@ -18,6 +18,16 @@ function emptyConfig(): CodexWatchConfig {
     },
     tutorials: [],
     community: null,
+    reminder: {
+      enabled: false,
+      appId: "",
+      appSecret: "",
+      templateId: "",
+      page: "pages/codex-watch/index",
+      statusKey: "thing1",
+      timeKey: "time3",
+      remarkKey: "thing5",
+    },
     updatedAt: null,
   };
 }

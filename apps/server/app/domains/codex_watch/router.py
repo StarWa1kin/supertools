@@ -2,11 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.config import get_settings
 from app.domains.codex_watch.reminders import (
     WechatApiError,
+    WechatClient,
     get_reminder_store,
-    get_wechat_client,
     reminder_is_configured,
 )
 from app.domains.codex_watch.schemas import (
@@ -39,13 +38,13 @@ async def get_public_config(
 async def subscribe_reset_reminder(
     payload: ResetReminderSubscriptionRequest,
 ) -> ResetReminderSubscriptionResponse:
-    settings = get_settings()
-    if not reminder_is_configured(settings):
+    config = await get_codex_watch_store().load()
+    if not reminder_is_configured(config.reminder):
         raise HTTPException(status_code=503, detail="微信重置提醒尚未配置")
-    if payload.template_id != settings.wechat_reset_template_id:
+    if payload.template_id != config.reminder.template_id:
         raise HTTPException(status_code=400, detail="订阅消息模板不匹配")
     try:
-        openid = await get_wechat_client().exchange_code(payload.code)
+        openid = await WechatClient(config.reminder).exchange_code(payload.code)
     except WechatApiError as exc:
         raise HTTPException(status_code=502, detail="微信登录校验失败") from exc
     subscription = await get_reminder_store().subscribe(openid, payload.template_id)

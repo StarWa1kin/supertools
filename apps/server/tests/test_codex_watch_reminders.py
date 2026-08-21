@@ -4,9 +4,14 @@ from pathlib import Path
 
 import httpx
 
-from app.core.config import Settings
 from app.domains.codex_watch.reminders import ReminderStore, WechatClient, latest_confirmed_reset
-from app.domains.codex_watch.schemas import WatchPost
+from app.domains.codex_watch.schemas import (
+    CodexWatchConfig,
+    CrawlerConfig,
+    ReminderConfig,
+    WatchPost,
+)
+from app.domains.codex_watch.store import CodexWatchConfigStore
 
 
 def make_post(**updates: object) -> WatchPost:
@@ -75,6 +80,31 @@ def test_latest_confirmed_reset_rejects_previews_and_unverified_posts() -> None:
     assert result.id == "confirmed"
 
 
+def test_empty_secret_preserves_the_existing_reminder_secret(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        store = CodexWatchConfigStore(
+            tmp_path,
+            CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"])),
+        )
+        await store.save(
+            CodexWatchConfig(
+                crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+                reminder=ReminderConfig(app_secret="kept-secret"),
+            )
+        )
+        saved = await store.save(
+            CodexWatchConfig(
+                crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+                reminder=ReminderConfig(enabled=True),
+            )
+        )
+
+        assert saved.reminder.enabled is True
+        assert saved.reminder.app_secret == "kept-secret"
+
+    asyncio.run(scenario())
+
+
 def test_wechat_client_exchanges_code_and_sends_message(tmp_path: Path) -> None:
     requests: list[httpx.Request] = []
 
@@ -86,11 +116,11 @@ def test_wechat_client_exchanges_code_and_sends_message(tmp_path: Path) -> None:
             return httpx.Response(200, json={"access_token": "token-1", "expires_in": 7200})
         return httpx.Response(200, json={"errcode": 0, "errmsg": "ok"})
 
-    settings = Settings(
-        WECHAT_REMINDER_ENABLED=True,
-        WECHAT_APP_ID="app-id",
-        WECHAT_APP_SECRET="app-secret",
-        WECHAT_RESET_TEMPLATE_ID="template-1",
+    settings = ReminderConfig(
+        enabled=True,
+        app_id="app-id",
+        app_secret="app-secret",
+        template_id="template-1",
     )
 
     async def scenario() -> str:
