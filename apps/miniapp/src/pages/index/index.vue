@@ -2,6 +2,7 @@
 import { onShow } from "@dcloudio/uni-app";
 
 import CodexWatchApp from "../../components/CodexWatchApp.vue";
+import HandBannerApp from "../../components/HandBannerApp.vue";
 import VideoParserApp from "../../components/VideoParserApp.vue";
 import { usePrimaryApp } from "../../composables/usePrimaryApp";
 
@@ -19,4 +20,5 @@ onShow(refreshHome);
 <template>
   <CodexWatchApp v-if="primaryApp.id === 'codex-watch'" />
   <VideoParserApp v-else-if="primaryApp.id === 'video-parser'" />
+  <HandBannerApp v-else-if="primaryApp.id === 'hand-banner'" />
 </template>

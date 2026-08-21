@@ -36,6 +36,18 @@ export const toolApps: ToolApp[] = [
     status: "三平台可用",
     statusClass: "bg-acid",
   },
+  {
+    id: "hand-banner",
+    name: "手持弹幕",
+    description: "输入一句话，横屏循环滚动播放。",
+    icon: "/static/apps/hand-banner.svg",
+    route: "/pages/hand-banner/index",
+    enabled: true,
+    featured: true,
+    order: 30,
+    status: "随时开播",
+    statusClass: "bg-acid",
+  },
 ];
 
 export function getEnabledApps(apps: ToolApp[] = toolApps) {

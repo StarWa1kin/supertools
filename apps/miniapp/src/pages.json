@@ -24,6 +24,18 @@
       "style": { "navigationBarTitleText": "解析记录" }
     },
     {
+      "path": "pages/hand-banner/index",
+      "style": { "navigationBarTitleText": "手持弹幕" }
+    },
+    {
+      "path": "pages/hand-banner/player",
+      "style": {
+        "navigationStyle": "custom",
+        "pageOrientation": "landscape",
+        "backgroundColor": "#08090b"
+      }
+    },
+    {
       "path": "pages/web-view/index",
       "style": { "navigationBarTitleText": "AI 教程" }
     }
