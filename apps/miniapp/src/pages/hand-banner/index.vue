@@ -3,5 +3,13 @@ import HandBannerApp from "../../components/HandBannerApp.vue";
 </script>
 
 <template>
-  <HandBannerApp />
+  <view class="hand-banner-page">
+    <HandBannerApp />
+  </view>
 </template>
+
+<style scoped>
+.hand-banner-page {
+  min-height: 100%;
+}
+</style>

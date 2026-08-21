@@ -46,6 +46,36 @@ def test_admin_config_requires_login() -> None:
     assert response.status_code == 401
 
 
+def test_admin_rejects_enabling_reminders_without_an_app_secret(tmp_path: Path) -> None:
+    store = CodexWatchConfigStore(tmp_path, build_default_config(get_settings()))
+    app.dependency_overrides[get_codex_watch_store] = lambda: store
+    try:
+        session = client.post(
+            "/api/v1/admin/login",
+            json={"username": "admin", "password": "come2u"},
+        )
+        response = client.put(
+            "/api/v1/admin/codex-watch/config",
+            headers={"Authorization": f"Bearer {session.json()['accessToken']}"},
+            json={
+                "crawler": {"account": "tibo", "keywords": ["reset"]},
+                "reminder": {
+                    "enabled": True,
+                    "appId": "wx-test",
+                    "appSecret": "",
+                    "templateId": "template-1",
+                },
+            },
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == (
+            "微信提醒配置不完整，请填写：小程序 AppSecret"
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_admin_deployment_requires_login() -> None:
     response = client.post("/api/v1/admin/deployment/server")
 

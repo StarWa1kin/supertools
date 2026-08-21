@@ -49,6 +49,23 @@ async def update_config(
     store: Annotated[CodexWatchConfigStore, Depends(get_codex_watch_store)],
     _admin: Annotated[str, Depends(require_admin)],
 ) -> CodexWatchConfig:
+    try:
+        current = await store.load()
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="服务端配置暂时无法读取，请稍后重试") from exc
+    if config.reminder.enabled:
+        missing: list[str] = []
+        if not config.reminder.app_id:
+            missing.append("小程序 AppID")
+        if not config.reminder.app_secret and not current.reminder.app_secret:
+            missing.append("小程序 AppSecret")
+        if not config.reminder.template_id:
+            missing.append("订阅消息模板 ID")
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"微信提醒配置不完整，请填写：{'、'.join(missing)}",
+            )
     return redact_reminder_secret(await store.save(config))
 
 
