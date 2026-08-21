@@ -43,6 +43,7 @@ const props = defineProps<{
   deploying: boolean;
   reminderSubscriptions: ReminderSubscription[];
   reminderLoading: boolean;
+  reminderError: string;
   testingSubscriptionId: string;
   requestLogs: RequestLogPage;
   requestLogsLoading: boolean;
@@ -89,6 +90,15 @@ const activeSection = computed<SectionId>(() => (route.meta.section as SectionId
 const current = computed(() => sections.find((item) => item.id === activeSection.value)!);
 const communityVisible = computed(() => Boolean(props.config.community?.qrCode));
 const isOperations = computed(() => operationsSections.some((item) => item.id === activeSection.value));
+const reminderReady = computed(() => Boolean(
+  props.config.reminder.enabled
+  && props.config.reminder.appId
+  && props.config.reminderSecretConfigured
+  && props.config.reminder.templateId,
+));
+const activeReminderCount = computed(() => props.reminderSubscriptions.filter(
+  (item) => item.isCurrentTemplate && item.remainingDeliveries > 0,
+).length);
 
 function selectSection(section: SectionId) {
   router.push(section === "crawler" ? "/codex-watch/crawler" : section === "tutorials" ? "/codex-watch/tutorials" : section === "community" ? "/codex-watch/community" : section === "reminder-settings" ? "/codex-watch/reminder-settings" : section === "reminders" ? "/ops/reminders" : section === "logs" ? "/ops/request-logs" : "/ops/deployment");
@@ -235,6 +245,12 @@ async function confirmDeploy(target: "server" | "admin") {
 }
 
 async function confirmReminderTest(subscription: ReminderSubscription) {
+  if (
+    !reminderReady.value
+    || !subscription.isCurrentTemplate
+    || subscription.remainingDeliveries <= 0
+    || props.testingSubscriptionId
+  ) return;
   try {
     await ElMessageBox.confirm(
       "这会向该用户发送一条真实的微信订阅消息，并消耗其 1 次可用推送授权。",
@@ -245,6 +261,22 @@ async function confirmReminderTest(subscription: ReminderSubscription) {
   } catch {
     // User cancelled the confirmation.
   }
+}
+
+function reminderActionLabel(subscription: ReminderSubscription) {
+  if (!reminderReady.value) return "配置未完成";
+  if (!subscription.isCurrentTemplate) return "模板已变更";
+  if (subscription.remainingDeliveries <= 0) return "授权已用完";
+  return "发送测试";
+}
+
+function reminderActionDisabled(subscription: ReminderSubscription) {
+  return Boolean(
+    !reminderReady.value
+    || !subscription.isCurrentTemplate
+    || subscription.remainingDeliveries <= 0
+    || props.testingSubscriptionId,
+  );
 }
 </script>
 
@@ -511,8 +543,8 @@ async function confirmReminderTest(subscription: ReminderSubscription) {
             <h2 class="section-title">微信订阅提醒</h2>
             <p class="section-copy">凭据安全保存在服务端持久化配置中。启用后无需重启，下一轮监控将自动生效。</p>
           </div>
-          <div :class="['status-pill', { 'status-pill--paused': !config.reminder.enabled }]">
-            <i />{{ config.reminder.enabled ? "提醒已启用" : "提醒未启用" }}
+          <div :class="['status-pill', { 'status-pill--paused': !reminderReady }]">
+            <i />{{ reminderReady ? "配置已生效" : "配置未完成" }}
           </div>
         </div>
 
@@ -526,7 +558,10 @@ async function confirmReminderTest(subscription: ReminderSubscription) {
               <el-form-item label="小程序 AppID"><el-input v-model="config.reminder.appId" maxlength="128" placeholder="wx..." /></el-form-item>
               <el-form-item label="订阅消息模板 ID"><el-input v-model="config.reminder.templateId" maxlength="256" placeholder="微信公众平台的模板 ID" /></el-form-item>
             </div>
-            <el-form-item label="小程序 AppSecret"><el-input v-model="config.reminder.appSecret" type="password" show-password maxlength="256" placeholder="留空并保存可保留服务端已有密钥" /></el-form-item>
+            <el-form-item label="小程序 AppSecret">
+              <el-input v-model="config.reminder.appSecret" type="password" show-password maxlength="256" placeholder="留空并保存可保留服务端已有密钥" />
+              <p class="field-help">{{ config.reminderSecretConfigured ? "服务端已保存密钥；仅在需要替换时重新填写。" : "尚未保存密钥，首次启用必须填写。" }}</p>
+            </el-form-item>
             <el-form-item label="消息点击后打开的页面"><el-input v-model="config.reminder.page" maxlength="256" placeholder="pages/codex-watch/index" /></el-form-item>
             <div class="tutorial-main-fields">
               <el-form-item label="状态字段键"><el-input v-model="config.reminder.statusKey" maxlength="64" placeholder="thing1" /></el-form-item>
@@ -610,25 +645,39 @@ async function confirmReminderTest(subscription: ReminderSubscription) {
           <div>
             <span class="section-number">04</span>
             <h2 class="section-title">微信订阅推送测试</h2>
-            <p class="section-copy">仅显示已在小程序完成订阅的用户。OpenID 始终脱敏；测试发送会消耗一次订阅授权。</p>
+            <p class="section-copy">显示全部订阅记录作为操作审计；只有当前模板且仍有授权次数的记录可以测试。</p>
           </div>
-          <el-button :icon="Refresh" :loading="reminderLoading" @click="emit('refreshReminders')">刷新列表</el-button>
+          <div class="reminder-head-actions">
+            <span class="reminder-active-count">当前可测试 {{ activeReminderCount }} 条</span>
+            <el-button :icon="Refresh" :loading="reminderLoading" @click="emit('refreshReminders')">刷新列表</el-button>
+          </div>
         </div>
 
-        <div class="reminder-guide">
+        <div v-if="!reminderReady" class="reminder-guide reminder-guide--warning">
+          <Warning />
+          <div><b>微信提醒配置尚未完成</b><span>请先保存启用状态、AppID、AppSecret 和当前模板 ID，再进行真实测试。</span></div>
+          <el-button size="small" @click="selectSection('reminder-settings')">前往提醒配置</el-button>
+        </div>
+        <div v-else class="reminder-guide">
           <Bell />
           <div><b>建议测试流程</b><span>先用测试微信号在小程序点击“订阅重置提醒”，回到这里刷新并选择该条记录发送。</span></div>
         </div>
 
-        <div v-if="reminderSubscriptions.length" class="reminder-list" v-loading="reminderLoading">
-          <article v-for="subscription in reminderSubscriptions" :key="subscription.id" class="reminder-row">
+        <div v-if="reminderError" class="content-empty reminder-empty empty-state--error">
+          <span class="empty-symbol"><Warning /></span>
+          <h3>订阅列表读取失败</h3>
+          <p>{{ reminderError }}</p>
+          <el-button :icon="Refresh" @click="emit('refreshReminders')">重新加载</el-button>
+        </div>
+        <div v-else-if="reminderSubscriptions.length" class="reminder-list" v-loading="reminderLoading">
+          <article :class="['reminder-row', { 'reminder-row--inactive': !subscription.isCurrentTemplate || subscription.remainingDeliveries === 0 }]" v-for="subscription in reminderSubscriptions" :key="subscription.id">
             <div class="reminder-user"><span><Bell /></span><div><b>{{ subscription.openidMasked }}</b><small>订阅于 {{ formatUpdatedAt(subscription.subscribedAt) }}</small></div></div>
-            <div class="reminder-meta"><small>模板</small><b>{{ subscription.templateId }}</b></div>
+            <div class="reminder-meta"><small>模板状态</small><b>{{ subscription.isCurrentTemplate ? "当前模板" : "历史模板" }}</b></div>
             <div :class="['reminder-credit', { exhausted: subscription.remainingDeliveries === 0 }]">
               <small>可用次数</small><b>{{ subscription.remainingDeliveries }}</b>
             </div>
-            <el-button type="primary" :loading="testingSubscriptionId === subscription.id" :disabled="subscription.remainingDeliveries === 0" @click="confirmReminderTest(subscription)">
-              {{ subscription.remainingDeliveries === 0 ? "已用完" : "发送测试" }}
+            <el-button type="primary" :loading="testingSubscriptionId === subscription.id" :disabled="reminderActionDisabled(subscription)" @click="confirmReminderTest(subscription)">
+              {{ reminderActionLabel(subscription) }}
             </el-button>
           </article>
         </div>

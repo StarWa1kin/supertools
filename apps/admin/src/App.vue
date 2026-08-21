@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useRoute, useRouter } from "vue-router";
 
@@ -18,6 +18,7 @@ const deployment = useDeployment(() => admin.token.value, admin.clearSession);
 const requestLogs = useRequestLogs(() => admin.token.value, admin.clearSession);
 const reminderSubscriptions = ref<ReminderSubscription[]>([]);
 const reminderLoading = ref(false);
+const reminderError = ref("");
 const testingSubscriptionId = ref("");
 
 function messageOf(error: unknown) {
@@ -27,12 +28,13 @@ function messageOf(error: unknown) {
 async function handleLogin(payload: { username: string; password: string }) {
   try {
     await admin.signIn(payload.username, payload.password);
-    await Promise.all([
+    const tasks = [
       admin.load(),
       deployment.loadDeployment(),
-      loadReminderSubscriptions(),
       requestLogs.load(),
-    ]);
+    ];
+    if (route.name === "reminders") tasks.push(loadReminderSubscriptions());
+    await Promise.all(tasks);
     if (route.name === "login") await router.replace("/codex-watch/crawler");
     ElMessage.success("欢迎回来");
   } catch (error) {
@@ -66,22 +68,37 @@ async function handleDeploy(target: "server" | "admin") {
 }
 
 async function loadReminderSubscriptions() {
+  if (!admin.token.value || reminderLoading.value) return;
   reminderLoading.value = true;
+  reminderError.value = "";
   try {
     reminderSubscriptions.value = await getReminderSubscriptions(admin.token.value);
+  } catch (error) {
+    reminderSubscriptions.value = [];
+    reminderError.value = messageOf(error);
+    throw error;
   } finally {
     reminderLoading.value = false;
   }
 }
 
+async function handleRefreshReminders() {
+  try {
+    await loadReminderSubscriptions();
+  } catch (error) {
+    ElMessage.error(messageOf(error));
+  }
+}
+
 async function handleReminderTest(subscriptionId: string) {
+  if (testingSubscriptionId.value) return;
   testingSubscriptionId.value = subscriptionId;
   try {
     const result = await sendReminderTest(admin.token.value, subscriptionId);
     reminderSubscriptions.value = reminderSubscriptions.value.map((item) => (
       item.id === subscriptionId ? result.subscription : item
     ));
-    ElMessage.success("测试推送已提交给微信");
+    ElMessage.success("测试消息发送成功，已消耗 1 次订阅授权");
   } catch (error) {
     ElMessage.error(messageOf(error));
   } finally {
@@ -94,12 +111,20 @@ onMounted(async () => {
   try {
     await admin.load();
     await deployment.loadDeployment();
-    await loadReminderSubscriptions();
+    if (route.name === "reminders") await loadReminderSubscriptions();
     await requestLogs.load();
   } catch (error) {
     ElMessage.error(messageOf(error));
   }
 });
+
+watch(
+  () => route.name,
+  async (name, previous) => {
+    if (name !== "reminders" || previous === undefined || !admin.authenticated.value) return;
+    await handleRefreshReminders();
+  },
+);
 </script>
 
 <template>
@@ -118,6 +143,7 @@ onMounted(async () => {
     :deploying="deployment.loadingDeployment.value"
     :reminder-subscriptions="reminderSubscriptions"
     :reminder-loading="reminderLoading"
+    :reminder-error="reminderError"
     :testing-subscription-id="testingSubscriptionId"
     :request-logs="requestLogs.logs.value"
     :request-logs-loading="requestLogs.loading.value"
@@ -130,7 +156,7 @@ onMounted(async () => {
     @disable-community="admin.disableCommunity"
     @deploy="handleDeploy"
     @refresh-deployment="deployment.loadDeployment"
-    @refresh-reminders="loadReminderSubscriptions"
+    @refresh-reminders="handleRefreshReminders"
     @test-reminder="handleReminderTest"
     @refresh-request-logs="loadRequestLogs"
   />

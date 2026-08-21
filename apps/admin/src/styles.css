@@ -425,6 +425,11 @@ button:not(:disabled):active, .el-button:not(.is-disabled):active { transform: s
 .upload-button { width: 182px; }
 .upload-hint { margin: 10px 0 0; color: #98989d; text-align: center; font-size: 9px; }
 .reminder-guide { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding: 14px 16px; color: #0754c6; background: #eaf2ff; border-radius: 8px; }
+.reminder-guide > div { min-width: 0; flex: 1; }
+.reminder-guide > .el-button { flex: none; }
+.reminder-guide--warning { color: #8a5200; background: #fff4dd; }
+.reminder-head-actions { display: flex; align-items: center; gap: 12px; }
+.reminder-active-count { color: #5f6368; font-size: 10px; font-weight: 620; }
 .reminder-settings-panel { max-width: 760px; }
 .setting-row--switch { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 0 0 18px; border-bottom: 1px solid rgb(60 60 67 / 10%); }
 .setting-row--switch b, .setting-row--switch span { display: block; }
@@ -436,6 +441,8 @@ button:not(:disabled):active, .el-button:not(.is-disabled):active { transform: s
 .reminder-guide span { margin-top: 4px; color: #4b6d9e; font-size: 10px; line-height: 1.55; }
 .reminder-list { display: grid; gap: 10px; }
 .reminder-row { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(130px, .7fr) 82px auto; align-items: center; gap: 16px; padding: 17px 18px; background: rgb(255 255 255 / 88%); border: 1px solid rgb(60 60 67 / 10%); border-radius: 8px; box-shadow: 0 8px 28px rgb(0 0 0 / 4%); }
+.reminder-row--inactive { background: rgb(247 247 249 / 86%); box-shadow: none; }
+.reminder-row--inactive .reminder-user, .reminder-row--inactive .reminder-meta { opacity: .64; }
 .reminder-user { display: flex; align-items: center; gap: 11px; }
 .reminder-user > span { width: 36px; height: 36px; display: grid; place-items: center; color: #0a6cff; background: #eaf2ff; border-radius: 8px; }
 .reminder-user svg { width: 17px; height: 17px; }

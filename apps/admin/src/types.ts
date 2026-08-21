@@ -35,6 +35,7 @@ export interface CodexWatchConfig {
   tutorials: TutorialConfig[];
   community: CommunityConfig | null;
   reminder: ReminderConfig;
+  reminderSecretConfigured: boolean;
   updatedAt: string | null;
 }
 
@@ -68,6 +69,7 @@ export interface ReminderSubscription {
   subscribedAt: string;
   remainingDeliveries: number;
   lastSentEventId: string | null;
+  isCurrentTemplate: boolean;
 }
 
 export interface ReminderTestResult {

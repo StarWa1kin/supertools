@@ -28,6 +28,7 @@ function emptyConfig(): CodexWatchConfig {
       timeKey: "time3",
       remarkKey: "thing5",
     },
+    reminderSecretConfigured: false,
     updatedAt: null,
   };
 }

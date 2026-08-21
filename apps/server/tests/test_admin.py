@@ -193,10 +193,12 @@ def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Pat
         assert saved.json()["crawler"]["keywords"] == ["codex", "reset"]
         assert saved.json()["updatedAt"] is not None
         assert saved.json()["reminder"]["appSecret"] == ""
+        assert saved.json()["reminderSecretConfigured"] is True
 
         reloaded = client.get("/api/v1/admin/codex-watch/config", headers=headers)
         assert reloaded.json()["crawler"]["intervalMinutes"] == 15
         assert reloaded.json()["reminder"]["appSecret"] == ""
+        assert reloaded.json()["reminderSecretConfigured"] is True
         assert (tmp_path / "config.json").exists()
 
         public_config = client.get("/api/v1/codex-watch/config")

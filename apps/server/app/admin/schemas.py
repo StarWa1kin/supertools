@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import Field
 
 from app.core.schemas import ApiModel
+from app.domains.codex_watch.schemas import CodexWatchConfig
 
 
 class AdminLoginRequest(ApiModel):
@@ -18,6 +19,10 @@ class AdminSession(ApiModel):
     username: str
 
 
+class AdminCodexWatchConfig(CodexWatchConfig):
+    reminder_secret_configured: bool = False
+
+
 class ReminderSubscriptionSummary(ApiModel):
     id: str
     openid_masked: str
@@ -25,6 +30,7 @@ class ReminderSubscriptionSummary(ApiModel):
     subscribed_at: datetime
     remaining_deliveries: int
     last_sent_event_id: str | None = None
+    is_current_template: bool = False
 
 
 class ReminderTestResponse(ApiModel):
