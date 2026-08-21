@@ -1,0 +1,110 @@
+import asyncio
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import httpx
+
+from app.core.config import Settings
+from app.domains.codex_watch.reminders import ReminderStore, WechatClient, latest_confirmed_reset
+from app.domains.codex_watch.schemas import WatchPost
+
+
+def make_post(**updates: object) -> WatchPost:
+    values: dict[str, object] = {
+        "id": "reset-1",
+        "text": "Usage limits reset",
+        "url": "https://x.com/thsottiaux/status/reset-1",
+        "published_at": datetime.now(UTC) + timedelta(minutes=1),
+        "confidence": "official",
+        "matched_keywords": ["reset"],
+        "event_type": "reset",
+    }
+    values.update(updates)
+    return WatchPost.model_validate(values)
+
+
+def test_subscription_is_consumed_after_mark_sent(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        store = ReminderStore(tmp_path)
+        subscription = await store.subscribe("openid-1", "template-1")
+        event = make_post()
+
+        assert subscription.remaining_deliveries == 1
+        assert len(await store.active_for(event)) == 1
+
+        await store.mark_sent("openid-1", "template-1", event.id)
+
+        assert await store.active_for(event) == []
+
+    asyncio.run(scenario())
+
+
+def test_legacy_subscription_gets_a_stable_id_for_admin_testing(tmp_path: Path) -> None:
+    (tmp_path / "reminders.json").write_text(
+        """{
+  "subscriptions": [{
+    "openid": "openid-legacy",
+    "template_id": "template-1",
+    "subscribed_at": "2026-08-20T00:00:00Z"
+  }]
+}""",
+        encoding="utf-8",
+    )
+
+    async def scenario() -> None:
+        store = ReminderStore(tmp_path)
+        first = (await store.list_subscriptions())[0]
+        second = (await store.list_subscriptions())[0]
+
+        assert first.id == second.id
+        assert (await store.get_by_id(first.id)) is not None
+
+    asyncio.run(scenario())
+
+
+def test_latest_confirmed_reset_rejects_previews_and_unverified_posts() -> None:
+    result = latest_confirmed_reset(
+        [
+            make_post(id="preview", preview=True),
+            make_post(id="third-party", confidence="third_party"),
+            make_post(id="confirmed", published_at=datetime.now(UTC)),
+        ]
+    )
+
+    assert result is not None
+    assert result.id == "confirmed"
+
+
+def test_wechat_client_exchanges_code_and_sends_message(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/sns/jscode2session":
+            return httpx.Response(200, json={"openid": "openid-1"})
+        if request.url.path == "/cgi-bin/token":
+            return httpx.Response(200, json={"access_token": "token-1", "expires_in": 7200})
+        return httpx.Response(200, json={"errcode": 0, "errmsg": "ok"})
+
+    settings = Settings(
+        WECHAT_REMINDER_ENABLED=True,
+        WECHAT_APP_ID="app-id",
+        WECHAT_APP_SECRET="app-secret",
+        WECHAT_RESET_TEMPLATE_ID="template-1",
+    )
+
+    async def scenario() -> str:
+        client = WechatClient(settings, transport=httpx.MockTransport(handler))
+        openid = await client.exchange_code("login-code")
+        subscription = await ReminderStore(tmp_path).subscribe(openid, "template-1")
+
+        await client.send_reset(subscription, make_post())
+        return openid
+
+    openid = asyncio.run(scenario())
+    assert openid == "openid-1"
+    assert [request.url.path for request in requests] == [
+        "/sns/jscode2session",
+        "/cgi-bin/token",
+        "/cgi-bin/message/subscribe/send",
+    ]

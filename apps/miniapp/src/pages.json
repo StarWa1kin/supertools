@@ -1,0 +1,56 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": { "navigationBarTitleText": "Supertools" }
+    },
+    {
+      "path": "pages/more/index",
+      "style": {
+        "navigationBarTitleText": "更多",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/codex-watch/index",
+      "style": { "navigationBarTitleText": "Codex 情报" }
+    },
+    {
+      "path": "pages/video-parser/index",
+      "style": { "navigationBarTitleText": "视频解析" }
+    },
+    {
+      "path": "pages/video-parser-history/index",
+      "style": { "navigationBarTitleText": "解析记录" }
+    },
+    {
+      "path": "pages/web-view/index",
+      "style": { "navigationBarTitleText": "AI 教程" }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#f4f1e8",
+    "backgroundColor": "#f4f1e8",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#7a7d76",
+    "selectedColor": "#171915",
+    "backgroundColor": "#f4f1e8",
+    "borderStyle": "black",
+    "height": "56px",
+    "fontSize": "12px",
+    "spacing": "4px",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/more/index",
+        "text": "更多"
+      }
+    ]
+  }
+}

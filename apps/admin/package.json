@@ -1,0 +1,26 @@
+{
+  "name": "@supertools/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit && vite build",
+    "type-check": "vue-tsc --noEmit",
+    "check": "pnpm type-check && pnpm build"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "element-plus": "^2.11.1",
+    "vue": "^3.4.21",
+    "vue-router": "^4.4.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.17.2",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "typescript": "^5.9.2",
+    "unocss": "^66.5.4",
+    "vite": "5.2.8",
+    "vue-tsc": "^3.0.6"
+  }
+}

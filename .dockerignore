@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.production.example
+node_modules
+**/node_modules
+dist
+**/dist
+.pnpm-store
+output
+.playwright-cli
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/.venv
+**/.data

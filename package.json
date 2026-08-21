@@ -1,0 +1,16 @@
+{
+  "name": "奇思妙箱",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev:admin": "pnpm --dir apps/admin dev",
+    "dev:miniapp": "pnpm --dir apps/miniapp dev:mp-weixin",
+    "dev:h5": "pnpm --dir apps/miniapp dev:h5",
+    "build:miniapp": "pnpm --dir apps/miniapp build:mp-weixin",
+    "check:miniapp": "pnpm --dir apps/miniapp check",
+    "test:miniapp": "pnpm --dir apps/miniapp test",
+    "build:admin": "pnpm --dir apps/admin build",
+    "check:admin": "pnpm --dir apps/admin check"
+  }
+}

@@ -1,0 +1,8 @@
+*
+!apps/
+!apps/admin/
+!apps/admin/dist/
+!apps/admin/dist/**
+!infra/
+!infra/nginx/
+!infra/nginx/admin.conf
