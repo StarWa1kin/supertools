@@ -33,10 +33,11 @@ HTTPS_PROXY=http://host.docker.internal:7890
 NO_PROXY=localhost,127.0.0.1,deployer
 ```
 
-`server` 容器已将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向 API 容器自身。Python 的 HTTP 客户端会自动读取这些标准环境变量。修改后重新创建 API 容器：
+`server` 和 `deployer` 容器均会将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向当前容器自身。Python 的 HTTP 客户端会自动读取这些标准环境变量，Admin 的隔离构建容器也会继承它们。修改后重新创建 API 和部署器容器：
 
 ```bash
 docker compose --env-file .env.production up -d --force-recreate server
+docker compose --env-file .env.production up -d --force-recreate deployer
 docker compose --env-file .env.production exec server python -c "import httpx; print(httpx.get('https://codex-reset.com', timeout=10).status_code)"
 ```
 

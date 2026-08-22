@@ -38,14 +38,14 @@ Tab 页面之间使用 `uni.switchTab`，普通工具页面使用 `uni.navigateT
 
 ```ts
 interface ToolApp {
-  id: string
-  name: string
-  description: string
-  icon: string
-  route: string
-  enabled: boolean
-  featured: boolean
-  order: number
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  route: string;
+  enabled: boolean;
+  featured: boolean;
+  order: number;
 }
 ```
 

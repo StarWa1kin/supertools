@@ -127,6 +127,9 @@ def build_admin(build_args: list[str]) -> None:
                 container,
                 "--tmpfs",
                 "/workspace:exec,size=1073741824",
+                "--add-host",
+                "host.docker.internal:host-gateway",
+                *proxy_environment_args(),
                 "-w",
                 "/workspace",
                 "node:22-alpine",
@@ -173,6 +176,15 @@ def build_admin(build_args: list[str]) -> None:
         )
     finally:
         subprocess.run(["docker", "rm", "-f", container], capture_output=True)
+
+
+def proxy_environment_args() -> list[str]:
+    args: list[str] = []
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"):
+        value = os.environ.get(name, "").strip()
+        if value:
+            args.extend(["--env", f"{name}={value}"])
+    return args
 
 
 def copy_admin_context(container: str) -> None:

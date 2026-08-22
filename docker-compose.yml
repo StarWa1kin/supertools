@@ -57,6 +57,11 @@ services:
       DEPLOY_REPOSITORY: /workspace
       DEPLOY_COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-supertools}
       DEPLOY_SERVICE_TOKEN: ${DEPLOY_SERVICE_TOKEN:?DEPLOY_SERVICE_TOKEN is required}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - .:/workspace
       - /var/run/docker.sock:/var/run/docker.sock
