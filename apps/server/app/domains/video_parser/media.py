@@ -86,6 +86,7 @@ class MediaProxy:
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(30, connect=5),
             follow_redirects=False,
+            trust_env=False,
             headers={"User-Agent": MOBILE_USER_AGENT, "Accept": "*/*"},
         )
 

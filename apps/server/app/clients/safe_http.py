@@ -96,6 +96,7 @@ class SafeHttpClient:
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout_seconds, connect=min(timeout_seconds, 5)),
             follow_redirects=False,
+            trust_env=False,
             transport=transport,
             headers={
                 "User-Agent": MOBILE_USER_AGENT,

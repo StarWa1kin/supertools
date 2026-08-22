@@ -270,6 +270,8 @@ def test_service_can_disable_dns_resolution_for_fake_ip_development() -> None:
     try:
         assert service.http_client.resolve_dns is False
         assert service.media_proxy.settings.video_parser_resolve_dns is False
+        assert service.http_client._client._trust_env is False
+        assert service.media_proxy._client._trust_env is False
     finally:
         asyncio.run(service.close())
 
