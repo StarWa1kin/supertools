@@ -91,8 +91,6 @@ Vue 组件使用 `<script setup lang="ts">`，缩进 2 个空格；Python 缩进
 
 ## 提交与 Pull Request
 
-## 临时产物
+## 服务器信息
 
-禁止在仓库根目录创建或使用 `output/`、`.data/`、`.dev-logs/`、`.playwright-cli/` 或 `.ruff_cache/`。测试临时文件、浏览器自动化状态和调试日志均使用系统临时目录或相应工具的默认目录；Ruff 缓存使用用户缓存目录；需要保留的构建与部署产物应写入仓库外的明确目标目录。不得将这些目录作为截图、压缩包、测试缓存、日志、运行时数据或部署副本的默认位置。
-
-提交信息采用 Conventional Commits，例如 `feat(miniapp): add unit converter`、`fix(api): reject invalid timezone`。一次提交只处理一个主题。Pull Request 需说明问题、实现方式和验证命令，关联相关 issue；界面改动附微信开发者工具截图，接口或配置变更需说明兼容性与部署步骤。禁止提交构建产物、依赖目录、缓存及真实密钥。
+ssh root@47.108.253.104
