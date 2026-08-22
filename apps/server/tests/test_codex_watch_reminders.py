@@ -86,6 +86,7 @@ def test_empty_secret_preserves_the_existing_reminder_secret(tmp_path: Path) -> 
         store = CodexWatchConfigStore(
             tmp_path,
             CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"])),
+            encryption_key="test-encryption-key",
         )
         await store.save(
             CodexWatchConfig(
@@ -106,11 +107,31 @@ def test_empty_secret_preserves_the_existing_reminder_secret(tmp_path: Path) -> 
     asyncio.run(scenario())
 
 
+def test_app_secret_is_encrypted_at_rest_and_decrypted_when_loaded(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        default = CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"]))
+        store = CodexWatchConfigStore(tmp_path, default, encryption_key="test-encryption-key")
+        config = CodexWatchConfig(
+            crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+            reminder=ReminderConfig(app_secret="wechat-secret"),
+        )
+
+        await store.save(config)
+        raw = (tmp_path / "config.json").read_text(encoding="utf-8")
+
+        assert "wechat-secret" not in raw
+        assert "enc:v1:" in raw
+        assert (await store.load()).reminder.app_secret == "wechat-secret"
+
+    asyncio.run(scenario())
+
+
 def test_public_config_hides_reminders_when_the_app_secret_is_missing(tmp_path: Path) -> None:
     async def scenario() -> None:
         store = CodexWatchConfigStore(
             tmp_path,
             CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"])),
+            encryption_key="test-encryption-key",
         )
         await store.save(
             CodexWatchConfig(

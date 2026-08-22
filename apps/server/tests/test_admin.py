@@ -47,7 +47,9 @@ def test_admin_config_requires_login() -> None:
 
 
 def test_admin_rejects_enabling_reminders_without_an_app_secret(tmp_path: Path) -> None:
-    store = CodexWatchConfigStore(tmp_path, build_default_config(get_settings()))
+    store = CodexWatchConfigStore(
+        tmp_path, build_default_config(get_settings()), encryption_key="test-encryption-key"
+    )
     app.dependency_overrides[get_codex_watch_store] = lambda: store
     try:
         session = client.post(
@@ -69,9 +71,7 @@ def test_admin_rejects_enabling_reminders_without_an_app_secret(tmp_path: Path) 
         )
 
         assert response.status_code == 400
-        assert response.json()["detail"] == (
-            "微信提醒配置不完整，请填写：小程序 AppSecret"
-        )
+        assert response.json()["detail"] == ("微信提醒配置不完整，请填写：小程序 AppSecret")
     finally:
         app.dependency_overrides.clear()
 
@@ -148,7 +148,9 @@ def test_admin_can_start_and_read_deployment() -> None:
 
 
 def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Path) -> None:
-    store = CodexWatchConfigStore(tmp_path, build_default_config(get_settings()))
+    store = CodexWatchConfigStore(
+        tmp_path, build_default_config(get_settings()), encryption_key="test-encryption-key"
+    )
     app.dependency_overrides[get_codex_watch_store] = lambda: store
     try:
         session = client.post(
@@ -215,7 +217,9 @@ def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Pat
 
 
 def test_admin_config_enforces_reference_crawler_limits(tmp_path: Path) -> None:
-    store = CodexWatchConfigStore(tmp_path, build_default_config(get_settings()))
+    store = CodexWatchConfigStore(
+        tmp_path, build_default_config(get_settings()), encryption_key="test-encryption-key"
+    )
     app.dependency_overrides[get_codex_watch_store] = lambda: store
     try:
         session = client.post(

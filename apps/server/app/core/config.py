@@ -63,6 +63,10 @@ class Settings(BaseSettings):
         ge=300,
         le=7 * 24 * 60 * 60,
     )
+    reminder_secret_encryption_key: str = Field(
+        default="",
+        alias="REMINDER_SECRET_ENCRYPTION_KEY",
+    )
     request_log_data_dir: Path = Field(
         default=DEFAULT_DATA_ROOT / "request-logs",
         alias="REQUEST_LOG_DATA_DIR",

@@ -21,7 +21,7 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-必须修改 `ADMIN_PASSWORD`、`ADMIN_TOKEN_SECRET`、`DEPLOY_SERVICE_TOKEN` 和 `VIDEO_MEDIA_SIGNING_SECRET`。`DEPLOY_SERVICE_TOKEN` 建议使用独立的 32 字节以上随机值，不能与管理员令牌密钥复用。私有 SSH 仓库还需将 `DEPLOY_SSH_DIR` 指向宿主机部署账号的 `.ssh` 目录，其中应包含只读部署密钥和 `known_hosts`。`APP_CORS_ORIGINS` 需要包含 `https://admin.devhooks.cn`。不要把 `.env.production` 提交到 Git。
+必须修改 `ADMIN_PASSWORD`、`ADMIN_TOKEN_SECRET`、`REMINDER_SECRET_ENCRYPTION_KEY`、`DEPLOY_SERVICE_TOKEN` 和 `VIDEO_MEDIA_SIGNING_SECRET`。`REMINDER_SECRET_ENCRYPTION_KEY` 用于加密数据卷中保存的微信 AppSecret，必须是独立的长随机值，且后续不得随意更换；更换后将无法解密既有配置。`DEPLOY_SERVICE_TOKEN` 建议使用独立的 32 字节以上随机值，不能与管理员令牌密钥复用。私有 SSH 仓库还需将 `DEPLOY_SSH_DIR` 指向宿主机部署账号的 `.ssh` 目录，其中应包含只读部署密钥和 `known_hosts`。`APP_CORS_ORIGINS` 需要包含 `https://admin.devhooks.cn`。不要把 `.env.production` 提交到 Git。
 
 ### 出站代理（可选）
 

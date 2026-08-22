@@ -5,6 +5,7 @@ description = "API service for the Supertools mini program"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
+  "cryptography>=46.0.0",
   "fastapi[standard-no-fastapi-cloud-cli]>=0.116.1",
   "httpx>=0.28.1",
   "pydantic-settings>=2.10.1",
