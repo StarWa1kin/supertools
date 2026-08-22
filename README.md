@@ -48,3 +48,4 @@ docker compose --env-file .env.production ps
 ```
 
 Python API 默认仅绑定宿主机 `127.0.0.1:8000`，管理端默认仅绑定 `127.0.0.1:8080`，分别由 `api.devhooks.cn` 和 `admin.devhooks.cn` 的宿主机 Nginx 反向代理。HTTPS、小程序 API 配置、更新和备份步骤见 [`docs/deployment.md`](docs/deployment.md)。小程序代码不包含在服务器 Compose 部署中。
+1
