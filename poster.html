@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>奇思妙箱 Supertools - 小程序功能宣传海报</title>
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #1e2417 0%, #0d0f0c 60%, #080907 100%);
+      --card-bg: rgba(26, 31, 22, 0.7);
+      --card-border: rgba(190, 242, 100, 0.18);
+      --card-border-hover: rgba(190, 242, 100, 0.45);
+      --text-main: #f4f6f0;
+      --text-muted: #9ba391;
+      --accent-acid: #c6ff00;
+      --accent-acid-glow: rgba(198, 255, 0, 0.35);
+      --accent-orange: #ff6b4a;
+      --accent-orange-glow: rgba(255, 107, 74, 0.35);
+      --accent-green: #22c55e;
+      --tag-bg: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Light/Cream theme toggle */
+    body.theme-cream {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #ffffff 0%, #f4f1e8 50%, #e9e4d6 100%);
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --card-border: rgba(23, 25, 21, 0.12);
+      --card-border-hover: rgba(23, 25, 21, 0.35);
+      --text-main: #171915;
+      --text-muted: #5e6357;
+      --accent-acid: #65a30d;
+      --accent-acid-glow: rgba(101, 163, 13, 0.2);
+      --accent-orange: #ea580c;
+      --accent-orange-glow: rgba(234, 88, 12, 0.2);
+      --accent-green: #16a34a;
+      --tag-bg: rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #050605;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 16px;
+      transition: all 0.3s ease;
+    }
+
+    /* Floating action bar for preview */
+    .action-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: rgba(30, 35, 26, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #c6ff00;
+      color: #c6ff00;
+    }
+
+    .btn-primary {
+      background: #c6ff00;
+      color: #0d0f0c;
+      border-color: #c6ff00;
+    }
+
+    .btn-primary:hover {
+      background: #d4ff33;
+      color: #000;
+      box-shadow: 0 0 15px rgba(198, 255, 0, 0.6);
+    }
+
+    /* Poster Container (9:16 Aspect Canvas) */
+    .poster-canvas {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-gradient);
+      border: 1px solid var(--card-border);
+      border-radius: 36px;
+      padding: 44px 32px 36px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(198, 255, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Background decorative elements */
+    .bg-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 380px;
+      background-image: linear-gradient(rgba(198, 255, 0, 0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(198, 255, 0, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: radial-gradient(ellipse at 50% 0%, black 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 20%, transparent 80%);
+      pointer-events: none;
+    }
+
+    .bg-glow-orb {
+      position: absolute;
+      top: -100px;
+      right: -80px;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-acid-glow) 0%, transparent 70%);
+      filter: blur(50px);
+      pointer-events: none;
+    }
+
+    /* Header Section */
+    .poster-header {
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--tag-bg);
+      border: 1px solid var(--card-border);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-acid);
+      margin-bottom: 16px;
+    }
+
+    .brand-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-acid);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-acid);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .main-title {
+      font-family: "Songti SC", "STSong", "PingFang SC", serif;
+      font-size: 38px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title-line-1 {
+      display: flex;
+      align-items: baseline;
+    }
+
+    .title-line-2 {
+      display: flex;
+      align-items: baseline;
+      margin-left: 28px;
+      color: var(--accent-acid);
+    }
+
+    .lead-char {
+      font-size: 52px;
+      font-weight: 900;
+      margin-right: 4px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-muted);
+      max-width: 90%;
+    }
+
+    /* Core Feature Cards */
+    .features-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      padding: 18px 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .app-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-header-info {
+      flex: 1;
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .app-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .app-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(198, 255, 0, 0.15);
+      color: var(--accent-acid);
+      border: 1px solid rgba(198, 255, 0, 0.3);
+    }
+
+    .app-badge.badge-coral {
+      background: rgba(255, 107, 74, 0.15);
+      color: var(--accent-orange);
+      border-color: rgba(255, 107, 74, 0.3);
+    }
+
+    .app-badge.badge-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent-green);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .app-tagline {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .feature-highlights {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .highlight-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--text-main);
+    }
+
+    .highlight-icon {
+      font-size: 11px;
+      color: var(--accent-acid);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .highlight-item strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Pills / Mini grid */
+    .mini-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .mini-tag {
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--tag-bg);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Advantage Badges Section */
+    .advantages-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .adv-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .adv-icon {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .adv-title {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .adv-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Poster Footer / Entry Call to Action */
+    .poster-footer {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(135deg, rgba(198, 255, 0, 0.08) 0%, rgba(26, 31, 22, 0.85) 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .cta-text {
+      flex: 1;
+    }
+
+    .cta-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .cta-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .qr-badge {
+      width: 60px;
+      height: 60px;
+      background: #ffffff;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .qr-icon-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #171915;
+      font-weight: 900;
+      font-size: 10px;
+      text-align: center;
+      border: 1.5px dashed #171915;
+      border-radius: 6px;
+      line-height: 1.1;
+    }
+
+    .footer-meta {
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      opacity: 0.6;
+      letter-spacing: 0.05em;
+      margin-top: -12px;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .action-bar {
+        display: none !important;
+      }
+      .poster-canvas {
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating action bar -->
+  <div class="action-bar">
+    <button class="btn" onclick="toggleTheme()">🌓 切换白昼 / 暗黑主题</button>
+    <button class="btn btn-primary" onclick="window.print()">🖨️ 打印 / 另存为图片</button>
+  </div>
+
+  <!-- Poster Canvas -->
+  <div class="poster-canvas" id="poster">
+    <div class="bg-grid"></div>
+    <div class="bg-glow-orb"></div>
+
+    <!-- Header -->
+    <div class="poster-header">
+      <div class="brand-eyebrow">
+        <span class="brand-dot"></span>
+        SUPERTOOLS · 微信小程序
+      </div>
+      <h1 class="main-title">
+        <div class="title-line-1">
+          <span class="lead-char">少</span>一点步骤，
+        </div>
+        <div class="title-line-2">
+          <span class="lead-char">快</span>一点答案。
+        </div>
+      </h1>
+      <p class="subtitle">『奇思妙箱』把零散但高频的需求，收进一个即开即用的口袋工具台。</p>
+    </div>
+
+    <!-- Feature Cards List -->
+    <div class="features-list">
+      
+      <!-- Card 1: Codex Watch -->
+      <div class="feature-card">
+        <div class="card-top">
+          <svg class="app-icon" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="160" height="160" rx="36" fill="url(#cw_bg)"/>
+            <circle cx="80" cy="80" r="50" stroke="#171915" stroke-width="12" stroke-opacity="0.2"/>
+            <circle cx="80" cy="80" r="32" stroke="#171915" stroke-width="12" stroke-opacity="0.3"/>
+            <circle cx="80" cy="80" r="14" fill="#171915"/>
+            <line x1="80" y1="80" x2="116" y2="44" stroke="#171915" stroke-width="10" stroke-linecap="round"/>
+            <circle cx="116" cy="44" r="8" fill="#ff4d2e"/>
+            <defs>
+              <linearGradient id="cw_bg" x1="20" y1="20" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#bef264"/>
+                <stop offset="1" stop-color="#84cc16"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="card-header-info">
+            <div class="card-title-row">
+              <span class="app-name">Codex 情报监控</span>
+              <span class="app-badge">实时预测</span>
+            </div>
+            <span class="app-tagline">AI 开发者与极客必备的额度雷达</span>
+          </div>
+        </div>
+        <div class="feature-highlights">
+          <div class="highlight-item">
+            <span class="highlight-icon">⚡</span>
+            <span><strong>实时情报聚合：</strong>持续抓取官方与核心动态，精准捕捉额度调整与重置信号</span>
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">📊</span>
+            <span><strong>智能重置预测：</strong>基于历史中位数与窗口模型，计算 24h / 48h 重置概率</span>
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">🔔</span>
+            <span><strong>微信订阅提醒：</strong>一键订阅模板消息，额度重置时自动下发推送通知</span>
+          </div>
+        </div>
+        <div class="mini-tags">
+          <span class="mini-tag">官方/第三方可信度标记</span>
+          <span class="mini-tag">中英双语对照</span>
+          <span class="mini-tag">关键词命中高亮</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Video Parser -->
+      <div class="feature-card">
+        <div class="card-top">
+          <svg class="app-icon" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="160" height="160" rx="36" fill="url(#vp_bg)"/>
+            <rect x="30" y="36" width="100" height="66" rx="18" fill="#f8f4ec" stroke="#171915" stroke-width="10"/>
+            <path d="M72 56L96 69L72 82V56Z" fill="#171915"/>
+            <path d="M80 102V124M80 124L65 109M80 124L95 109" stroke="#171915" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="vp_bg" x1="20" y1="20" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#ff8a4c"/>
+                <stop offset="1" stop-color="#f95738"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="card-header-info">
+            <div class="card-title-row">
+              <span class="app-name">多平台无水印解析</span>
+              <span class="app-badge badge-coral">原画提取</span>
+            </div>
+            <span class="app-tagline">抖音 · 快手 · 小红书 公开内容一键提取</span>
+          </div>
+        </div>
+        <div class="feature-highlights">
+          <div class="highlight-item">
+            <span class="highlight-icon">🎬</span>
+            <span><strong>无水印高清流：</strong>自动识别分享链接，提取无水印高清视频与全套图集</span>
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">🔒</span>
+            <span><strong>安全流式中转：</strong>短期签名 Token 代理，支持 Range 分片与极速流畅预览</span>
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">💾</span>
+            <span><strong>一键保存相册：</strong>提取封面、作者信息与多媒体素材，支持历史解析记录</span>
+          </div>
+        </div>
+        <div class="mini-tags">
+          <span class="mini-tag">三平台独立适配</span>
+          <span class="mini-tag">原图集批量保存</span>
+          <span class="mini-tag">不落盘流式加速</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Hand Banner -->
+      <div class="feature-card">
+        <div class="card-top">
+          <svg class="app-icon" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="160" height="160" rx="36" fill="#111417"/>
+            <rect x="22" y="42" width="116" height="76" rx="18" stroke="#bef264" stroke-width="8"/>
+            <circle cx="48" cy="80" r="7" fill="#f4f1e8"/>
+            <line x1="55" y1="80" x2="110" y2="80" stroke="#bef264" stroke-width="8" stroke-linecap="round"/>
+            <path d="M96 66L112 80L96 94" stroke="#f4f1e8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="card-header-info">
+            <div class="card-title-row">
+              <span class="app-name">手持滚动弹幕</span>
+              <span class="app-badge badge-green">现场神器</span>
+            </div>
+            <span class="app-tagline">接机 / 演唱会 / 聚会打 Call 随时开播</span>
+          </div>
+        </div>
+        <div class="feature-highlights">
+          <div class="highlight-item">
+            <span class="highlight-icon">✨</span>
+            <span><strong>横屏沉浸播放：</strong>一键切入横屏全屏，醒目循环滚动，现场视效拉满</span>
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">🎨</span>
+            <span><strong>自由个性定制：</strong>支持字号调节、滚动速率、霓虹荧光配色与动态闪烁</span>
+          </div>
+        </div>
+        <div class="mini-tags">
+          <span class="mini-tag">零延迟离线可用</span>
+          <span class="mini-tag">横屏自适应</span>
+          <span class="mini-tag">纯净无遮挡</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Value Propositions -->
+    <div class="advantages-grid">
+      <div class="adv-card">
+        <div class="adv-icon">⚡️</div>
+        <div class="adv-title">极速启动</div>
+        <div class="adv-desc">零冗余 · 秒开即用</div>
+      </div>
+      <div class="adv-card">
+        <div class="adv-icon">🎯</div>
+        <div class="adv-title">首页自定义</div>
+        <div class="adv-desc">长按设置默认主应用</div>
+      </div>
+      <div class="adv-card">
+        <div class="adv-icon">🛡️</div>
+        <div class="adv-title">纯净安全</div>
+        <div class="adv-desc">无骚扰 · 不留残留</div>
+      </div>
+    </div>
+
+    <!-- Poster Footer / CTA -->
+    <div class="poster-footer">
+      <div class="cta-text">
+        <div class="cta-title">
+          <span>微信搜索</span>
+          <span style="color: var(--accent-acid);">「奇思妙箱」</span>
+        </div>
+        <div class="cta-desc">扫码或搜索小程序名，即刻体验高效百宝箱</div>
+      </div>
+      <div class="qr-badge">
+        <div class="qr-icon-inner">
+          奇思<br>妙箱
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-meta">
+      SUPERTOOLS · POCKET UTILITY DESK · V0.1.0
+    </div>
+
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle('theme-cream');
+    }
+  </script>
+</body>
+</html>
