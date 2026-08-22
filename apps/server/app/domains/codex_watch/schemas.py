@@ -101,7 +101,7 @@ class ReminderConfig(ApiModel):
     enabled: bool = False
     app_id: str = Field(default="", max_length=128)
     # Ciphertext is longer than the plaintext accepted by the admin form.
-    app_secret: str = Field(default="", max_length=1024)
+    app_secret: str = Field(default="", max_length=2048)
     template_id: str = Field(default="", max_length=256)
     page: str = Field(default="pages/codex-watch/index", max_length=256)
     status_key: str = Field(default="thing1", max_length=64)

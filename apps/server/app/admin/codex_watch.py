@@ -39,9 +39,13 @@ def subscription_summary(
     )
 
 
-def redact_reminder_secret(config: CodexWatchConfig) -> AdminCodexWatchConfig:
+def protect_reminder_secret(
+    config: CodexWatchConfig, store: CodexWatchConfigStore
+) -> AdminCodexWatchConfig:
     payload = config.model_dump()
-    payload["reminder"]["app_secret"] = ""
+    payload["reminder"]["app_secret"] = store.encrypt_secret_for_client(
+        config.reminder.app_secret
+    )
     payload["reminder_secret_configured"] = bool(config.reminder.app_secret)
     return AdminCodexWatchConfig.model_validate(payload)
 
@@ -51,7 +55,10 @@ async def get_config(
     store: Annotated[CodexWatchConfigStore, Depends(get_codex_watch_store)],
     _admin: Annotated[str, Depends(require_admin)],
 ) -> AdminCodexWatchConfig:
-    return redact_reminder_secret(await store.load())
+    try:
+        return protect_reminder_secret(await store.load(), store)
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="服务端配置暂时无法读取，请稍后重试") from exc
 
 
 @router.put("/config", response_model=AdminCodexWatchConfig)
@@ -77,7 +84,13 @@ async def update_config(
                 status_code=400,
                 detail=f"微信提醒配置不完整，请填写：{'、'.join(missing)}",
             )
-    return redact_reminder_secret(await store.save(config))
+    try:
+        return protect_reminder_secret(await store.save(config), store)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="服务端配置暂时无法保存，请检查 REMINDER_SECRET_ENCRYPTION_KEY",
+        ) from exc
 
 
 @router.get("/reminder-subscriptions", response_model=list[ReminderSubscriptionSummary])

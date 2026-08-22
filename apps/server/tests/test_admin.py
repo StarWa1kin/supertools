@@ -76,6 +76,33 @@ def test_admin_rejects_enabling_reminders_without_an_app_secret(tmp_path: Path) 
         app.dependency_overrides.clear()
 
 
+def test_admin_returns_a_clear_error_when_secret_encryption_is_not_configured(
+    tmp_path: Path,
+) -> None:
+    store = CodexWatchConfigStore(tmp_path, build_default_config(get_settings()))
+    app.dependency_overrides[get_codex_watch_store] = lambda: store
+    try:
+        session = client.post(
+            "/api/v1/admin/login",
+            json={"username": "admin", "password": "come2u"},
+        )
+        response = client.put(
+            "/api/v1/admin/codex-watch/config",
+            headers={"Authorization": f"Bearer {session.json()['accessToken']}"},
+            json={
+                "crawler": {"account": "tibo", "keywords": ["reset"]},
+                "reminder": {"appSecret": "secret-not-for-plaintext-storage"},
+            },
+        )
+
+        assert response.status_code == 503
+        assert response.json()["detail"] == (
+            "服务端配置暂时无法保存，请检查 REMINDER_SECRET_ENCRYPTION_KEY"
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_admin_deployment_requires_login() -> None:
     response = client.post("/api/v1/admin/deployment/server")
 
@@ -194,14 +221,23 @@ def test_admin_config_is_persisted_and_filtered_for_public_clients(tmp_path: Pat
         assert saved.json()["crawler"]["account"] == "thsottiaux"
         assert saved.json()["crawler"]["keywords"] == ["codex", "reset"]
         assert saved.json()["updatedAt"] is not None
-        assert saved.json()["reminder"]["appSecret"] == ""
+        assert saved.json()["reminder"]["appSecret"].startswith("enc:v1:")
         assert saved.json()["reminderSecretConfigured"] is True
 
         reloaded = client.get("/api/v1/admin/codex-watch/config", headers=headers)
         assert reloaded.json()["crawler"]["intervalMinutes"] == 15
-        assert reloaded.json()["reminder"]["appSecret"] == ""
+        assert reloaded.json()["reminder"]["appSecret"].startswith("enc:v1:")
         assert reloaded.json()["reminderSecretConfigured"] is True
         assert (tmp_path / "config.json").exists()
+
+        # The encrypted value returned to the browser can be submitted unchanged.
+        resaved = client.put(
+            "/api/v1/admin/codex-watch/config",
+            json=reloaded.json(),
+            headers=headers,
+        )
+        assert resaved.status_code == 200
+        assert resaved.json()["reminder"]["appSecret"].startswith("enc:v1:")
 
         public_config = client.get("/api/v1/codex-watch/config")
         assert public_config.status_code == 200

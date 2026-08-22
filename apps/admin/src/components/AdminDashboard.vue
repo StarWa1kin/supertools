@@ -560,7 +560,7 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
             </div>
             <el-form-item label="小程序 AppSecret">
               <el-input v-model="config.reminder.appSecret" type="password" show-password maxlength="256" placeholder="留空并保存可保留服务端已有密钥" />
-              <p class="field-help">{{ config.reminderSecretConfigured ? "服务端已保存密钥；仅在需要替换时重新填写。" : "尚未保存密钥，首次启用必须填写。" }}</p>
+              <p class="field-help">{{ config.reminderSecretConfigured ? "服务端已保存密钥；当前值为可回传保存的加密值，仅在需要替换时重新填写。" : "尚未保存密钥，首次启用必须填写。" }}</p>
             </el-form-item>
             <el-form-item label="消息点击后打开的页面"><el-input v-model="config.reminder.page" maxlength="256" placeholder="pages/codex-watch/index" /></el-form-item>
             <div class="tutorial-main-fields">

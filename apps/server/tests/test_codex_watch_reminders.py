@@ -126,6 +126,24 @@ def test_app_secret_is_encrypted_at_rest_and_decrypted_when_loaded(tmp_path: Pat
     asyncio.run(scenario())
 
 
+def test_client_encrypted_app_secret_can_be_saved_again(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        default = CodexWatchConfig(crawler=CrawlerConfig(account="tibo", keywords=["reset"]))
+        store = CodexWatchConfigStore(tmp_path, default, encryption_key="test-encryption-key")
+        encrypted = store.encrypt_secret_for_client("wechat-secret")
+
+        await store.save(
+            CodexWatchConfig(
+                crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+                reminder=ReminderConfig(app_secret=encrypted),
+            )
+        )
+
+        assert (await store.load()).reminder.app_secret == "wechat-secret"
+
+    asyncio.run(scenario())
+
+
 def test_public_config_hides_reminders_when_the_app_secret_is_missing(tmp_path: Path) -> None:
     async def scenario() -> None:
         store = CodexWatchConfigStore(

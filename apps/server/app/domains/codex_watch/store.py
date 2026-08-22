@@ -40,8 +40,8 @@ class CodexWatchConfigStore:
             return await asyncio.to_thread(self._read)
 
     async def save(self, config: CodexWatchConfig) -> CodexWatchConfig:
-        # The admin API intentionally never returns the AppSecret. An empty value
-        # therefore means "keep the existing secret", not "erase it".
+        # Empty values preserve the existing secret. Values returned to an admin
+        # client are encrypted, so decrypt them before writing the config again.
         if not config.reminder.app_secret:
             current = await self.load()
             config = config.model_copy(
@@ -51,10 +51,32 @@ class CodexWatchConfigStore:
                     )
                 }
             )
+        else:
+            config = config.model_copy(
+                update={
+                    "reminder": config.reminder.model_copy(
+                        update={
+                            "app_secret": self._decrypt_secret_value(
+                                config.reminder.app_secret
+                            )
+                        }
+                    )
+                }
+            )
         saved = config.model_copy(update={"updated_at": datetime.now(UTC)})
         async with self._lock:
             await asyncio.to_thread(self._write, saved)
         return saved
+
+    def encrypt_secret_for_client(self, secret: str) -> str:
+        """Return an opaque, round-trippable AppSecret for authenticated admins."""
+        if not secret:
+            return ""
+        if self._cipher is None:
+            raise OSError("未配置 REMINDER_SECRET_ENCRYPTION_KEY，无法加密 AppSecret")
+        return self._encrypted_secret_prefix + self._cipher.encrypt(
+            secret.encode("utf-8")
+        ).decode("utf-8")
 
     def _read(self) -> CodexWatchConfig:
         try:
@@ -96,11 +118,16 @@ class CodexWatchConfigStore:
         secret = reminder.get("appSecret")
         if not isinstance(secret, str) or not secret.startswith(self._encrypted_secret_prefix):
             return
+        reminder["appSecret"] = self._decrypt_secret_value(secret)
+
+    def _decrypt_secret_value(self, secret: str) -> str:
+        if not secret.startswith(self._encrypted_secret_prefix):
+            return secret
         if self._cipher is None:
             raise OSError("缺少 REMINDER_SECRET_ENCRYPTION_KEY，无法读取已加密的 AppSecret")
         token = secret.removeprefix(self._encrypted_secret_prefix)
         try:
-            reminder["appSecret"] = self._cipher.decrypt(token.encode("utf-8")).decode("utf-8")
+            return self._cipher.decrypt(token.encode("utf-8")).decode("utf-8")
         except (InvalidToken, UnicodeDecodeError, binascii.Error) as exc:
             raise OSError(
                 "无法解密已保存的 AppSecret，请检查 REMINDER_SECRET_ENCRYPTION_KEY"
