@@ -30,10 +30,10 @@ nano .env.production
 ```ini
 HTTP_PROXY=http://host.docker.internal:7890
 HTTPS_PROXY=http://host.docker.internal:7890
-NO_PROXY=localhost,127.0.0.1,deployer
+NO_PROXY=localhost,127.0.0.1,deployer,api.weixin.qq.com
 ```
 
-`server` 和 `deployer` 容器均会将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向当前容器自身。Python 的 HTTP 客户端会自动读取这些标准环境变量，Admin 的隔离构建容器也会继承它们。修改后重新创建 API 和部署器容器：
+`server` 和 `deployer` 容器均会将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向当前容器自身。微信 API 应保留在 `NO_PROXY` 中直连，避免部分代理提前断开 HTTPS 连接。Python 的 HTTP 客户端会自动读取这些标准环境变量，Admin 的隔离构建容器也会继承它们。修改后重新创建 API 和部署器容器：
 
 ```bash
 docker compose --env-file .env.production up -d --force-recreate server

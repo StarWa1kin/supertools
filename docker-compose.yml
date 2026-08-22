@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    environment:
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer,api.weixin.qq.com}
     # Lets outbound Python requests reach a proxy running on the Docker host.
     # Use host.docker.internal (not 127.0.0.1) in HTTP(S)_PROXY.
     extra_hosts:
@@ -33,7 +35,7 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api.devhooks.cn}
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
-        NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer}
+        NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer,api.weixin.qq.com}
       extra_hosts:
         - "host.docker.internal:host-gateway"
     image: supertools-admin:latest
@@ -59,7 +61,7 @@ services:
       DEPLOY_SERVICE_TOKEN: ${DEPLOY_SERVICE_TOKEN:?DEPLOY_SERVICE_TOKEN is required}
       HTTP_PROXY: ${HTTP_PROXY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}
-      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,deployer,api.weixin.qq.com}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
