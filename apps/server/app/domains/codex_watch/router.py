@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 import httpx
@@ -19,6 +20,7 @@ from app.domains.codex_watch.service import CodexWatchService
 from app.domains.codex_watch.store import CodexWatchConfigStore, get_codex_watch_store
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/posts", response_model=WatchPostList)
@@ -50,11 +52,20 @@ async def subscribe_reset_reminder(
     try:
         openid = await WechatClient(config.reminder).exchange_code(payload.code)
     except WechatApiError as exc:
+        logger.warning(
+            "WeChat login code exchange rejected errcode=%s error=%s",
+            exc.errcode,
+            str(exc),
+        )
         raise HTTPException(
             status_code=502,
             detail="微信登录校验失败，请在微信中重新打开小程序后再试",
         ) from exc
     except httpx.HTTPError as exc:
+        logger.warning(
+            "WeChat login code exchange request failed error_type=%s",
+            type(exc).__name__,
+        )
         raise HTTPException(status_code=502, detail="暂时无法连接微信服务，请稍后重试") from exc
     try:
         subscription = await get_reminder_store().subscribe(openid, payload.template_id)
