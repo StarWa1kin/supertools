@@ -24,7 +24,16 @@ function isH5Runtime() {
 }
 
 function errorMessage(reason: unknown) {
-  return reason instanceof Error ? reason.message : "解析失败，请稍后再试";
+  if (reason instanceof Error) return reason.message;
+  if (typeof reason === "object" && reason) {
+    if ("errMsg" in reason && typeof reason.errMsg === "string") {
+      return reason.errMsg;
+    }
+    if ("message" in reason && typeof reason.message === "string") {
+      return reason.message;
+    }
+  }
+  return "操作失败，请稍后再试";
 }
 
 function ensurePrivacyAuthorization() {
