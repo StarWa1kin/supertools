@@ -24,6 +24,13 @@
       "style": { "navigationBarTitleText": "解析记录" }
     },
     {
+      "path": "pages/video-parser-tutorial/index",
+      "style": {
+        "navigationBarTitleText": "使用教程",
+        "navigationBarBackgroundColor": "#f4f1e8"
+      }
+    },
+    {
       "path": "pages/hand-banner/index",
       "style": { "navigationBarTitleText": "手持弹幕" }
     },
