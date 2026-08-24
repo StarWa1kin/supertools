@@ -45,13 +45,7 @@ const {
 } = useVideoParser();
 
 function showTutorial() {
-  uni.showModal({
-    title: "使用教程",
-    content:
-      "1. 在平台内复制公开作品的分享链接\n2. 粘贴分享文案或链接并开始解析\n3. 解析完成后预览并保存视频或图片",
-    showCancel: false,
-    confirmText: "知道了",
-  });
+  uni.navigateTo({ url: "/pages/video-parser-tutorial/index" });
 }
 
 function openHistory() {

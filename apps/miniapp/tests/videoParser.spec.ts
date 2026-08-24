@@ -125,6 +125,27 @@ describe("useVideoParser", () => {
     expect(parser.saving.value).toBe(false);
   });
 
+  it("shows the native album error when saving a video fails", async () => {
+    const downloadFile = vi.fn((options) => {
+      options.success({ statusCode: 200, tempFilePath: "temp/video.mp4" });
+      return { onProgressUpdate: vi.fn() };
+    });
+    const saveVideoToPhotosAlbum = vi.fn((options) => {
+      options.fail({
+        errMsg: "saveVideoToPhotosAlbum:fail video format is not supported",
+      });
+    });
+    vi.stubGlobal("uni", baseUni({ downloadFile, saveVideoToPhotosAlbum }));
+    const parser = useVideoParser();
+
+    await parser.downloadAsset(videoAsset);
+
+    expect(parser.error.value).toBe(
+      "saveVideoToPhotosAlbum:fail video format is not supported",
+    );
+    expect(parser.saveStatus.value).toBe("");
+  });
+
   it("reports partial success when saving multiple images fails", async () => {
     const images: VideoAsset[] = [1, 2].map((index) => ({
       kind: "image",
