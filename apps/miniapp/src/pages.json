@@ -2,42 +2,81 @@
   "pages": [
     {
       "path": "pages/index/index",
-      "style": { "navigationBarTitleText": "Supertools" }
+      "style": {
+        "navigationBarTitleText": "Supertools",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     },
     {
       "path": "pages/more/index",
       "style": {
         "navigationBarTitleText": "更多",
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
       }
     },
     {
       "path": "pages/codex-watch/index",
-      "style": { "navigationBarTitleText": "Codex 情报" }
+      "style": {
+        "navigationBarTitleText": "Codex 情报",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     },
     {
       "path": "pages/video-parser/index",
-      "style": { "navigationBarTitleText": "视频解析" }
+      "style": {
+        "navigationBarTitleText": "视频解析",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     },
     {
       "path": "pages/video-parser-history/index",
-      "style": { "navigationBarTitleText": "解析记录" }
+      "style": {
+        "navigationBarTitleText": "解析记录",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     },
     {
       "path": "pages/hand-banner/index",
-      "style": { "navigationBarTitleText": "手持弹幕" }
+      "style": {
+        "navigationBarTitleText": "手持弹幕",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
+    },
+    {
+      "path": "pages/border-watermark/index",
+      "style": {
+        "navigationBarTitleText": "边框水印",
+        "navigationBarTextStyle": "white",
+        "navigationBarBackgroundColor": "#11110f",
+        "backgroundColor": "#11110f",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     },
     {
       "path": "pages/hand-banner/player",
       "style": {
         "navigationStyle": "custom",
         "pageOrientation": "landscape",
-        "backgroundColor": "#08090b"
+        "backgroundColor": "#08090b",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
       }
     },
     {
       "path": "pages/web-view/index",
-      "style": { "navigationBarTitleText": "AI 教程" }
+      "style": {
+        "navigationBarTitleText": "AI 教程",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
+      }
     }
   ],
   "globalStyle": {
