@@ -48,6 +48,18 @@ export const toolApps: ToolApp[] = [
     status: "随时开播",
     statusClass: "bg-acid",
   },
+  {
+    id: "border-watermark",
+    name: "边框水印",
+    description: "给照片添加高级边框、品牌标识和拍摄参数。",
+    icon: "/static/apps/border-watermark.svg",
+    route: "/pages/border-watermark/index",
+    enabled: true,
+    featured: true,
+    order: 40,
+    status: "本地生成",
+    statusClass: "bg-acid",
+  },
 ];
 
 export function getEnabledApps(apps: ToolApp[] = toolApps) {

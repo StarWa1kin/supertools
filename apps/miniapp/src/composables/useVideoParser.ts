@@ -3,21 +3,11 @@ import { computed, ref } from "vue";
 import { resolveApiUrl } from "../api/client";
 import { resolveVideo, type VideoAsset, type VideoResolveResult } from "../api/videoParser";
 import { detectVideoPlatform, extractShareUrl } from "../utils/toolRules";
+import { ensurePrivacyAuthorization } from "../utils/privacy";
 import {
   addVideoParserHistory,
   updateVideoParserHistory,
 } from "./videoParserHistory";
-
-interface PrivacyApi {
-  getPrivacySetting?: (options: {
-    success: (result: { needAuthorization: boolean }) => void;
-    fail: () => void;
-  }) => void;
-  requirePrivacyAuthorize?: (options: {
-    success: () => void;
-    fail: () => void;
-  }) => void;
-}
 
 function isH5Runtime() {
   return typeof window !== "undefined" && typeof window.open === "function";
@@ -25,28 +15,6 @@ function isH5Runtime() {
 
 function errorMessage(reason: unknown) {
   return reason instanceof Error ? reason.message : "解析失败，请稍后再试";
-}
-
-function ensurePrivacyAuthorization() {
-  const privacyApi = uni as unknown as PrivacyApi;
-  if (!privacyApi.getPrivacySetting || !privacyApi.requirePrivacyAuthorize) {
-    return Promise.resolve();
-  }
-  return new Promise<void>((resolve, reject) => {
-    privacyApi.getPrivacySetting?.({
-      success(setting) {
-        if (!setting.needAuthorization) {
-          resolve();
-          return;
-        }
-        privacyApi.requirePrivacyAuthorize?.({
-          success: resolve,
-          fail: reject,
-        });
-      },
-      fail: resolve,
-    });
-  });
 }
 
 function downloadTempFile(url: string, onProgress: (progress: number) => void) {
