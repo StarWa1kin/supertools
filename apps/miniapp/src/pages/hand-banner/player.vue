@@ -1,15 +1,30 @@
 <script setup lang="ts">
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onUnload } from "@dcloudio/uni-app";
+import { ref } from "vue";
 
 import { useHandBanner } from "../../composables/handBanner";
 
 const { message, textColor, fontScale, restore } = useHandBanner();
+const showHint = ref(true);
+let hintTimer: ReturnType<typeof setTimeout> | undefined;
 
 function goBack() {
   uni.navigateBack();
 }
 
-onLoad(restore);
+onLoad(() => {
+  restore();
+  showHint.value = true;
+  hintTimer = setTimeout(() => {
+    showHint.value = false;
+  }, 1000);
+});
+
+onUnload(() => {
+  if (hintTimer !== undefined) {
+    clearTimeout(hintTimer);
+  }
+});
 </script>
 
 <template>
@@ -19,7 +34,7 @@ onLoad(restore);
       <text class="banner-player__text" :style="{ color: textColor, fontSize: `${16 * fontScale}vw` }">{{ message }}</text>
       <text class="banner-player__text" :style="{ color: textColor, fontSize: `${16 * fontScale}vw` }" aria-hidden="true">{{ message }}</text>
     </view>
-    <view class="banner-player__hint">轻触屏幕返回编辑</view>
+    <view v-if="showHint" class="banner-player__hint">轻触屏幕返回编辑</view>
   </view>
 </template>
 

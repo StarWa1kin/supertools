@@ -39,7 +39,7 @@ export function useHandBanner() {
     if (!stored || typeof stored !== "object") return;
 
     const settings = stored as Record<string, unknown>;
-    if (typeof settings.message === "string" && settings.message.trim()) {
+    if (typeof settings.message === "string") {
       message.value = sanitizeBannerText(settings.message);
     }
     textColor.value = sanitizeColor(settings.textColor);
@@ -47,7 +47,7 @@ export function useHandBanner() {
   }
 
   function save(value = message.value) {
-    const next = sanitizeBannerText(value) || DEFAULT_TEXT;
+    const next = sanitizeBannerText(value);
     message.value = next;
     uni.setStorageSync(STORAGE_KEY, {
       message: next,

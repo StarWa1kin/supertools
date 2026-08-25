@@ -20,6 +20,11 @@ function startPlaying() {
   uni.navigateTo({ url: "/pages/hand-banner/player" });
 }
 
+function clearMessage() {
+  message.value = "";
+  save();
+}
+
 onShow(restore);
 </script>
 
@@ -36,7 +41,18 @@ onShow(restore);
       <view class="editor-card">
         <view class="editor-card__heading">
           <text>弹幕内容</text>
-          <text class="editor-card__count">还可输入 {{ remaining }} 字</text>
+          <view class="editor-card__actions">
+            <button
+              v-if="message"
+              class="editor-card__clear"
+              aria-label="清空弹幕内容"
+              hover-class="editor-card__clear--pressed"
+              @click="clearMessage"
+            >
+              清空
+            </button>
+            <text class="editor-card__count">还可输入 {{ remaining }} 字</text>
+          </view>
         </view>
         <textarea
           v-model="message"
@@ -114,6 +130,10 @@ onShow(restore);
 .editor-card { padding: 30rpx; }
 .editor-card__heading, .preview-card__topline { display: flex; align-items: center; justify-content: space-between; }
 .editor-card__heading { font-size: 27rpx; font-weight: 750; }
+.editor-card__actions { display: flex; align-items: center; gap: 14rpx; }
+.editor-card__clear { min-width: 72rpx; height: 44rpx; margin: 0; padding: 0 14rpx; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: rgba(255,255,255,.06); color: rgba(248,247,237,.72); font-size: 20rpx; font-weight: 650; line-height: 42rpx; }
+.editor-card__clear::after { border: 0; }
+.editor-card__clear--pressed { border-color: rgba(137,255,60,.42); background: rgba(137,255,60,.12); color: #89ff3c; }
 .editor-card__count { color: rgba(248,247,237,.48); font-family: monospace; font-size: 20rpx; font-weight: 400; }
 .editor-card__input { box-sizing: border-box; width: 100%; min-height: 160rpx; margin-top: 24rpx; padding: 22rpx 0 8rpx; border-top: 1px solid rgba(255,255,255,.1); color: #fff; font-size: 39rpx; font-weight: 700; line-height: 1.35; }
 .editor-card__placeholder { color: rgba(248,247,237,.27); }
