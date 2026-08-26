@@ -1,27 +1,57 @@
 <script setup lang="ts">
-import { onShow } from "@dcloudio/uni-app";
+import {
+  onShareAppMessage,
+  onShareTimeline,
+  onShow,
+} from "@dcloudio/uni-app";
 
 import ToolAppIcon from "../../components/ToolAppIcon.vue";
 import ThemeSwitcher from "../../components/ThemeSwitcher.vue";
+import { createPageShare } from "../../composables/usePageShare";
 import { useTheme } from "../../composables/useTheme";
 import { usePrimaryApp } from "../../composables/usePrimaryApp";
-import { getEnabledApps, type ToolApp } from "../../config/apps";
+import {
+  getEnabledApps,
+  isAppAvailable,
+  type ToolApp,
+} from "../../config/apps";
 
 const apps = getEnabledApps();
+const availableCount = apps.filter((app) => isAppAvailable(app)).length;
+const developingCount = apps.length - availableCount;
 const { themeClass } = useTheme();
 const { primaryAppId, refreshPrimaryApp, setPrimaryApp } = usePrimaryApp();
 let suppressNextOpen = false;
 
-function openApp(route: string) {
+const pageShare = createPageShare({
+  title: "奇思妙箱｜简单好用的随身工具箱",
+  path: "/pages/more/index",
+});
+onShareAppMessage(pageShare.shareAppMessage);
+onShareTimeline(pageShare.shareTimeline);
+onShow(pageShare.showShareMenu);
+
+function appIsAvailable(app: ToolApp) {
+  return isAppAvailable(app);
+}
+
+function openApp(app: ToolApp) {
   if (suppressNextOpen) {
     suppressNextOpen = false;
     return;
   }
 
-  uni.navigateTo({ url: route });
+  if (!appIsAvailable(app)) {
+    uni.showToast({ title: `「${app.name}」仍在开发中`, icon: "none" });
+    return;
+  }
+
+  uni.navigateTo({ url: app.route });
 }
 
 function choosePrimaryApp(app: ToolApp) {
+  if (!appIsAvailable(app)) return;
+
   suppressNextOpen = true;
 
   void uni
@@ -81,17 +111,31 @@ onShow(refreshPrimaryApp);
         :key="app.id"
         :class="[
           'app-launcher',
-          { 'app-launcher--primary': primaryAppId === app.id },
+          {
+            'app-launcher--primary':
+              appIsAvailable(app) && primaryAppId === app.id,
+            'app-launcher--unavailable': !appIsAvailable(app),
+          },
         ]"
         :style="{ animationDelay: `${index * 45}ms` }"
-        hover-class="app-launcher--pressed"
+        :hover-class="appIsAvailable(app) ? 'app-launcher--pressed' : 'none'"
         :hover-stay-time="80"
-        @click="openApp(app.route)"
+        :aria-disabled="!appIsAvailable(app)"
+        @click="openApp(app)"
         @longpress="choosePrimaryApp(app)"
       >
         <view class="app-icon-wrap">
-          <ToolAppIcon :app="app" />
-          <text v-if="primaryAppId === app.id" class="primary-badge">首页</text>
+          <view class="app-icon-art">
+            <ToolAppIcon :app="app" />
+          </view>
+          <text
+            v-if="appIsAvailable(app) && primaryAppId === app.id"
+            class="primary-badge"
+            >首页</text
+          >
+          <text v-if="!appIsAvailable(app)" class="development-badge">
+            {{ app.status }}
+          </text>
         </view>
         <text class="app-launcher__name">{{ app.name }}</text>
       </view>
@@ -109,7 +153,10 @@ onShow(refreshPrimaryApp);
 
     <view class="library-footer">
       <view class="library-footer__line" />
-      <text>{{ apps.length }} APPS / READY</text>
+      <text v-if="developingCount > 0">
+        {{ availableCount }} READY / {{ developingCount }} IN DEV
+      </text>
+      <text v-else>{{ apps.length }} APPS / READY</text>
     </view>
   </view>
 </template>
@@ -297,6 +344,34 @@ onShow(refreshPrimaryApp);
   font-size: 17rpx;
   font-weight: 800;
   line-height: 34rpx;
+}
+
+.development-badge {
+  position: absolute;
+  right: -16rpx;
+  bottom: -8rpx;
+  display: flex;
+  min-height: 34rpx;
+  align-items: center;
+  padding: 0 11rpx;
+  border: 2rpx solid var(--color-page);
+  border-radius: 999px;
+  background: #777771;
+  color: #fff;
+  font-size: 17rpx;
+  font-weight: 800;
+  line-height: 34rpx;
+  letter-spacing: 0.04em;
+}
+
+.app-launcher--unavailable .app-icon-art {
+  filter: grayscale(1);
+  opacity: 0.42;
+}
+
+.app-launcher--unavailable .app-launcher__name {
+  font-weight: 500;
+  opacity: 0.38;
 }
 
 .app-launcher--primary .app-launcher__name {

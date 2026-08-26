@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import {
+  onShareAppMessage,
+  onShareTimeline,
+  onShow,
+} from "@dcloudio/uni-app";
 
 import { useTheme } from "../../composables/useTheme";
+import { createPageShare } from "../../composables/usePageShare";
 import {
   clearVideoParserHistory,
   getVideoParserHistory,
@@ -13,6 +18,14 @@ import {
 
 const { themeClass } = useTheme();
 const records = ref<VideoParserHistoryItem[]>([]);
+
+const pageShare = createPageShare({
+  title: "视频链接解析｜奇思妙箱",
+  path: "/pages/video-parser/index",
+});
+onShareAppMessage(pageShare.shareAppMessage);
+onShareTimeline(pageShare.shareTimeline);
+onShow(pageShare.showShareMenu);
 
 const statusNames = {
   pending: "解析中",

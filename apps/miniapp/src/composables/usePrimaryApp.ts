@@ -1,25 +1,31 @@
 import { computed, ref } from "vue";
 
-import { getEnabledApps, type ToolApp } from "../config/apps";
+import {
+  getEnabledApps,
+  isAppAvailable,
+  type ToolApp,
+} from "../config/apps";
 
 const STORAGE_KEY = "supertools.primary-app";
 const DEFAULT_PRIMARY_APP_ID = "codex-watch";
 
 const primaryAppId = ref(DEFAULT_PRIMARY_APP_ID);
 
-function findEnabledApp(appId: unknown): ToolApp | undefined {
+function findAvailableApp(appId: unknown): ToolApp | undefined {
   if (typeof appId !== "string") return undefined;
-  return getEnabledApps().find((app) => app.id === appId);
+  return getEnabledApps().find(
+    (app) => app.id === appId && isAppAvailable(app),
+  );
 }
 
 export function refreshPrimaryApp() {
-  const storedApp = findEnabledApp(uni.getStorageSync(STORAGE_KEY));
+  const storedApp = findAvailableApp(uni.getStorageSync(STORAGE_KEY));
   primaryAppId.value = storedApp?.id ?? DEFAULT_PRIMARY_APP_ID;
   return primaryAppId.value;
 }
 
 export function setPrimaryApp(appId: string) {
-  const app = findEnabledApp(appId);
+  const app = findAvailableApp(appId);
   if (!app) return false;
 
   primaryAppId.value = app.id;
@@ -30,8 +36,8 @@ export function setPrimaryApp(appId: string) {
 export function usePrimaryApp() {
   const primaryApp = computed(
     () =>
-      findEnabledApp(primaryAppId.value) ??
-      findEnabledApp(DEFAULT_PRIMARY_APP_ID)!,
+      findAvailableApp(primaryAppId.value) ??
+      findAvailableApp(DEFAULT_PRIMARY_APP_ID)!,
   );
 
   return {

@@ -1,8 +1,26 @@
 <script setup lang="ts">
-import { onLoad } from "@dcloudio/uni-app";
+import {
+  onLoad,
+  onShareAppMessage,
+  onShareTimeline,
+  onShow,
+} from "@dcloudio/uni-app";
 import { ref } from "vue";
 
+import { createPageShare } from "../../composables/usePageShare";
+
 const sourceUrl = ref("");
+
+const pageShare = createPageShare({
+  title: "AI 实用教程｜奇思妙箱",
+  path: () =>
+    sourceUrl.value
+      ? `/pages/web-view/index?url=${encodeURIComponent(sourceUrl.value)}`
+      : "/pages/web-view/index",
+});
+onShareAppMessage(pageShare.shareAppMessage);
+onShareTimeline(pageShare.shareTimeline);
+onShow(pageShare.showShareMenu);
 
 onLoad((options) => {
   const rawUrl = typeof options?.url === "string" ? decodeURIComponent(options.url) : "";

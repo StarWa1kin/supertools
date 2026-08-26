@@ -7,6 +7,13 @@ onLaunch(() => {
 });
 onShow(() => {
   initializeTheme();
+
+  // #ifdef MP-WEIXIN
+  uni.showShareMenu({
+    withShareTicket: true,
+    menus: ["shareAppMessage", "shareTimeline"],
+  });
+  // #endif
 });
 onHide(() => undefined);
 </script>

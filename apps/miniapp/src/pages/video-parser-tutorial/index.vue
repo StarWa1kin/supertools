@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import { onShareAppMessage, onShareTimeline, onShow } from "@dcloudio/uni-app";
+
 import { useTheme } from "../../composables/useTheme";
+import { createPageShare } from "../../composables/usePageShare";
 
 const { themeClass } = useTheme();
+
+const pageShare = createPageShare({
+  title: "三步学会解析公开视频｜奇思妙箱",
+  path: "/pages/video-parser-tutorial/index",
+});
+onShareAppMessage(pageShare.shareAppMessage);
+onShareTimeline(pageShare.shareTimeline);
+onShow(pageShare.showShareMenu);
 
 const steps = [
   {

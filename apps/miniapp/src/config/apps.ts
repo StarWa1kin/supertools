@@ -7,6 +7,7 @@ export interface ToolApp {
   enabled: boolean;
   featured: boolean;
   order: number;
+  releaseStage: "released" | "internal";
   status: string;
   statusClass: string;
 }
@@ -21,6 +22,7 @@ export const toolApps: ToolApp[] = [
     enabled: true,
     featured: true,
     order: 10,
+    releaseStage: "released",
     status: "待接入数据源",
     statusClass: "bg-acid",
   },
@@ -33,6 +35,7 @@ export const toolApps: ToolApp[] = [
     enabled: true,
     featured: true,
     order: 20,
+    releaseStage: "released",
     status: "三平台可用",
     statusClass: "bg-acid",
   },
@@ -45,6 +48,7 @@ export const toolApps: ToolApp[] = [
     enabled: true,
     featured: true,
     order: 30,
+    releaseStage: "released",
     status: "随时开播",
     statusClass: "bg-acid",
   },
@@ -57,7 +61,8 @@ export const toolApps: ToolApp[] = [
     enabled: true,
     featured: true,
     order: 40,
-    status: "本地生成",
+    releaseStage: "internal",
+    status: "开发中",
     statusClass: "bg-acid",
   },
 ];
@@ -70,4 +75,11 @@ export function getEnabledApps(apps: ToolApp[] = toolApps) {
 
 export function getFeaturedApps(apps: ToolApp[] = toolApps) {
   return getEnabledApps(apps).filter((app) => app.featured);
+}
+
+export function isAppAvailable(
+  app: ToolApp,
+  production = import.meta.env.PROD,
+) {
+  return app.enabled && (!production || app.releaseStage === "released");
 }

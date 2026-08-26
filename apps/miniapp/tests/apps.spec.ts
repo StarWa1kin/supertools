@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { getEnabledApps, getFeaturedApps, toolApps, type ToolApp } from "../src/config/apps";
+import {
+  getEnabledApps,
+  getFeaturedApps,
+  isAppAvailable,
+  toolApps,
+  type ToolApp,
+} from "../src/config/apps";
 
 describe("tool app registry", () => {
   it("keeps ids and routes unique", () => {
@@ -23,5 +29,15 @@ describe("tool app registry", () => {
       "later",
     ]);
   });
-});
 
+  it("keeps internal apps usable in development but locks them in production", () => {
+    const internalApp: ToolApp = {
+      ...toolApps[0],
+      releaseStage: "internal",
+    };
+
+    expect(isAppAvailable(internalApp, false)).toBe(true);
+    expect(isAppAvailable(internalApp, true)).toBe(false);
+    expect(isAppAvailable({ ...internalApp, enabled: false }, false)).toBe(false);
+  });
+});

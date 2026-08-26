@@ -45,7 +45,9 @@
       "path": "pages/video-parser-tutorial/index",
       "style": {
         "navigationBarTitleText": "使用教程",
-        "navigationBarBackgroundColor": "#f4f1e8"
+        "navigationBarBackgroundColor": "#f4f1e8",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
       }
     },
     {

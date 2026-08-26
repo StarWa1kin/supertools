@@ -1,12 +1,27 @@
 <script setup lang="ts">
-import { onLoad, onUnload } from "@dcloudio/uni-app";
+import {
+  onLoad,
+  onShareAppMessage,
+  onShareTimeline,
+  onShow,
+  onUnload,
+} from "@dcloudio/uni-app";
 import { ref } from "vue";
 
 import { useHandBanner } from "../../composables/handBanner";
+import { createPageShare } from "../../composables/usePageShare";
 
 const { message, textColor, fontScale, restore } = useHandBanner();
 const showHint = ref(true);
 let hintTimer: ReturnType<typeof setTimeout> | undefined;
+
+const pageShare = createPageShare({
+  title: "手持弹幕｜奇思妙箱",
+  path: "/pages/hand-banner/index",
+});
+onShareAppMessage(pageShare.shareAppMessage);
+onShareTimeline(pageShare.shareTimeline);
+onShow(pageShare.showShareMenu);
 
 function goBack() {
   uni.navigateBack();
