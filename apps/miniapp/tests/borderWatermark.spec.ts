@@ -49,7 +49,7 @@ describe("border watermark settings", () => {
 
   it("builds a compact camera parameter line", () => {
     expect(formatParameterLine(defaultBorderWatermarkSettings)).toBe(
-      "28mm · ƒ/2.4 · 1/100s · ISO 200",
+      "24mm f/1.8 1/60 ISO200",
     );
     expect(
       formatParameterLine({

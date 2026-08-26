@@ -7,7 +7,7 @@ import {
   type FramePreset,
 } from "../config/borderWatermark";
 
-const STORAGE_KEY = "supertools.border-watermark.settings.v1";
+const STORAGE_KEY = "supertools.border-watermark.settings.v2";
 
 export interface BorderWatermarkSettings {
   presetId: FramePreset["id"];
@@ -16,6 +16,8 @@ export interface BorderWatermarkSettings {
   cornerRadius: number;
   signature: string;
   model: string;
+  capturedAt: string;
+  location: string;
   focalLength: string;
   aperture: string;
   shutter: string;
@@ -26,14 +28,16 @@ export interface BorderWatermarkSettings {
 export const defaultBorderWatermarkSettings: BorderWatermarkSettings = {
   presetId: "gallery",
   brandId: "apple",
-  framePercent: 8,
+  framePercent: 0,
   cornerRadius: 0,
   signature: "SUPERTOOLS STUDIO",
   model: "iPhone 17 Pro",
-  focalLength: "28mm",
-  aperture: "ƒ/2.4",
-  shutter: "1/100s",
-  iso: "ISO 200",
+  capturedAt: "2026.01.01 18:49:31",
+  location: `48°20'22"N 86°44'27"E`,
+  focalLength: "24mm",
+  aperture: "f/1.8",
+  shutter: "1/60",
+  iso: "ISO200",
   showParameters: true,
 };
 
@@ -48,6 +52,12 @@ function cleanText(value: unknown, fallback: string, maxLength = 36) {
   return cleaned.slice(0, maxLength) || fallback;
 }
 
+function cleanOptionalText(value: unknown, fallback: string, maxLength = 36) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "string") return fallback;
+  return value.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ").trim().slice(0, maxLength);
+}
+
 export function sanitizeBorderWatermarkSettings(
   value: Partial<BorderWatermarkSettings> | null | undefined,
 ): BorderWatermarkSettings {
@@ -58,14 +68,16 @@ export function sanitizeBorderWatermarkSettings(
   return {
     presetId,
     brandId,
-    framePercent: clamp(source.framePercent, 2, 18, getFramePreset(presetId).defaultFrame),
+    framePercent: clamp(source.framePercent, 0, 18, getFramePreset(presetId).defaultFrame),
     cornerRadius: clamp(source.cornerRadius, 0, 40, 0),
     signature: cleanText(source.signature, defaultBorderWatermarkSettings.signature, 32),
     model: cleanText(source.model, defaultBorderWatermarkSettings.model, 32),
-    focalLength: cleanText(source.focalLength, defaultBorderWatermarkSettings.focalLength, 12),
-    aperture: cleanText(source.aperture, defaultBorderWatermarkSettings.aperture, 12),
-    shutter: cleanText(source.shutter, defaultBorderWatermarkSettings.shutter, 12),
-    iso: cleanText(source.iso, defaultBorderWatermarkSettings.iso, 12),
+    capturedAt: cleanOptionalText(source.capturedAt, defaultBorderWatermarkSettings.capturedAt, 24),
+    location: cleanOptionalText(source.location, defaultBorderWatermarkSettings.location, 48),
+    focalLength: cleanOptionalText(source.focalLength, defaultBorderWatermarkSettings.focalLength, 12),
+    aperture: cleanOptionalText(source.aperture, defaultBorderWatermarkSettings.aperture, 12),
+    shutter: cleanOptionalText(source.shutter, defaultBorderWatermarkSettings.shutter, 12),
+    iso: cleanOptionalText(source.iso, defaultBorderWatermarkSettings.iso, 12),
     showParameters:
       typeof source.showParameters === "boolean" ? source.showParameters : true,
   };
@@ -75,7 +87,7 @@ export function formatParameterLine(settings: BorderWatermarkSettings) {
   if (!settings.showParameters) return "";
   return [settings.focalLength, settings.aperture, settings.shutter, settings.iso]
     .filter(Boolean)
-    .join(" · ");
+    .join(" ");
 }
 
 export function useBorderWatermark() {

@@ -61,7 +61,7 @@ export const framePresets: FramePreset[] = [
     background: "#f7f5ef",
     foreground: "#171713",
     muted: "#77746c",
-    defaultFrame: 8,
+    defaultFrame: 0,
   },
   {
     id: "noir",

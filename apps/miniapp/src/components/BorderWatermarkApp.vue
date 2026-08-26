@@ -10,12 +10,18 @@ import {
   type FramePreset,
 } from "../config/borderWatermark";
 import { ensurePrivacyAuthorization } from "../utils/privacy";
+import {
+  readPhotoMetadata,
+  type PhotoMetadata,
+} from "../composables/photoMetadata";
 
 interface ChosenPhoto {
   id: string;
   path: string;
   size: number;
   name: string;
+  metadata: PhotoMetadata | null;
+  metadataStatus: "reading" | "found" | "empty" | "error";
 }
 
 interface ChooseMediaFile {
@@ -50,12 +56,21 @@ const canvasHeight = ref(300);
 
 const currentPhoto = computed(() => photos.value[selectedPhotoIndex.value]);
 const frameStyle = computed(() => ({
-  padding: `${Math.max(10, settings.framePercent * 2.2)}rpx`,
-  paddingBottom: `${Math.max(64, settings.framePercent * 3.6 + 50)}rpx`,
+  padding: `${settings.framePercent * 2.2}rpx`,
+  paddingBottom: `${Math.max(92, settings.framePercent * 2.2 + 92)}rpx`,
   borderRadius: `${settings.cornerRadius}rpx`,
   background: preset.value.background,
   color: preset.value.foreground,
 }));
+
+const metadataStatusText = computed(() => {
+  const photo = currentPhoto.value;
+  if (!photo) return "";
+  if (photo.metadataStatus === "reading") return "正在读取照片信息…";
+  if (photo.metadataStatus === "found") return "已从原图读取 EXIF，可继续手动修改";
+  if (photo.metadataStatus === "empty") return "原图未保留 EXIF，已使用可编辑的默认信息";
+  return "暂时无法读取照片信息，可手动填写";
+});
 
 const modelDefaults: Record<BrandLogoId, string> = {
   apple: "iPhone 17 Pro",
@@ -64,15 +79,55 @@ const modelDefaults: Record<BrandLogoId, string> = {
   custom: "CAMERA / UNKNOWN",
 };
 
+function inferBrand(metadata: PhotoMetadata): BrandLogoId {
+  const camera = `${metadata.make} ${metadata.model}`.toLowerCase();
+  if (/apple|iphone/.test(camera)) return "apple";
+  if (/canon/.test(camera)) return "canon";
+  if (/sony/.test(camera)) return "sony";
+  return "custom";
+}
+
+function applyMetadata(metadata: PhotoMetadata) {
+  settings.brandId = inferBrand(metadata);
+  if (metadata.model) settings.model = metadata.model;
+  settings.capturedAt = metadata.capturedAt;
+  settings.focalLength = metadata.focalLength;
+  settings.aperture = metadata.aperture;
+  settings.shutter = metadata.shutter;
+  settings.iso = metadata.iso;
+  settings.location = metadata.location;
+  save();
+}
+
+async function hydratePhotoMetadata(photo: ChosenPhoto) {
+  try {
+    const metadata = await readPhotoMetadata(photo.path);
+    photo.metadata = metadata;
+    photo.metadataStatus = metadata ? "found" : "empty";
+    if (metadata && currentPhoto.value?.id === photo.id) applyMetadata(metadata);
+  } catch {
+    photo.metadataStatus = "error";
+  }
+}
+
 function appendPhotos(files: ChooseMediaFile[]) {
   const nextPhotos = files.map((file, index) => ({
     id: `${Date.now()}-${index}`,
     path: file.tempFilePath,
     size: Number(file.size ?? 0),
     name: `照片 ${photos.value.length + index + 1}`,
+    metadata: null,
+    metadataStatus: "reading" as const,
   }));
   photos.value.push(...nextPhotos);
   selectedPhotoIndex.value = Math.max(0, photos.value.length - nextPhotos.length);
+  nextPhotos.forEach(hydratePhotoMetadata);
+}
+
+function selectPhoto(index: number) {
+  selectedPhotoIndex.value = index;
+  const metadata = photos.value[index]?.metadata;
+  if (metadata) applyMetadata(metadata);
 }
 
 function isSelectionCancelled(reason: unknown) {
@@ -185,6 +240,20 @@ function toggleParameters() {
   save();
 }
 
+function saveMetadataEdits() {
+  const metadata = currentPhoto.value?.metadata;
+  if (metadata) {
+    metadata.model = settings.model;
+    metadata.capturedAt = settings.capturedAt;
+    metadata.focalLength = settings.focalLength;
+    metadata.aperture = settings.aperture;
+    metadata.shutter = settings.shutter;
+    metadata.iso = settings.iso;
+    metadata.location = settings.location;
+  }
+  save();
+}
+
 function getImageInfo(src: string) {
   return new Promise<UniApp.GetImageInfoSuccessData>((resolve, reject) => {
     uni.getImageInfo({ src, success: resolve, fail: reject });
@@ -281,7 +350,7 @@ async function renderPhoto(photo: ChosenPhoto) {
   const scale = Math.min(1, MAX_EXPORT_EDGE / Math.max(rawWidth, rawHeight));
   const imageWidth = Math.max(1, Math.round(info.width * scale));
   const imageHeight = Math.max(1, Math.round(info.height * scale));
-  const frame = Math.max(16, Math.round(baseFrame * scale));
+  const frame = Math.max(0, Math.round(baseFrame * scale));
   const metaHeight = Math.max(96, Math.round(baseMetaHeight * scale));
   const outputWidth = imageWidth + frame * 2;
   const outputHeight = imageHeight + frame + metaHeight;
@@ -306,40 +375,60 @@ async function renderPhoto(photo: ChosenPhoto) {
   const metadataTop = frame + imageHeight;
   const smallFont = Math.max(20, Math.round(outputWidth * 0.024));
   const tinyFont = Math.max(16, Math.round(outputWidth * 0.016));
-  const horizontalInset = frame;
+  const horizontalInset = Math.max(frame, Math.round(outputWidth * 0.066));
+  const photoMetadata = photo.metadata;
+  const model = photoMetadata ? photoMetadata.model : settings.model;
+  const capturedAt = photoMetadata ? photoMetadata.capturedAt : settings.capturedAt;
+  const location = photoMetadata ? photoMetadata.location : settings.location;
+  const captureLine = [
+    photoMetadata ? photoMetadata.focalLength : settings.focalLength,
+    photoMetadata ? photoMetadata.aperture : settings.aperture,
+    photoMetadata ? photoMetadata.shutter : settings.shutter,
+    photoMetadata ? photoMetadata.iso : settings.iso,
+  ].filter(Boolean).join(" ");
+  const renderBrandId = photoMetadata ? inferBrand(photoMetadata) : settings.brandId;
+  const renderBrand = brandLogoPacks.find((item) => item.id === renderBrandId) ?? brand.value;
   context.setFillStyle(preset.value.foreground);
   context.setTextAlign("left");
   context.setTextBaseline("top");
   context.setFontSize(smallFont);
-  context.fillText(settings.model, horizontalInset, metadataTop + metaHeight * 0.28);
+  context.fillText(model, horizontalInset, metadataTop + metaHeight * 0.28);
   context.setFillStyle(preset.value.muted);
   context.setFontSize(tinyFont);
-  context.fillText(settings.signature, horizontalInset, metadataTop + metaHeight * 0.58);
+  context.fillText(capturedAt, horizontalInset, metadataTop + metaHeight * 0.58);
 
-  context.setTextAlign("right");
+  const dividerX = Math.round(outputWidth * 0.68);
+  const markSize = smallFont * 1.55;
   context.setFillStyle(preset.value.foreground);
-  if (settings.brandId === "apple") {
-    const markSize = smallFont * 1.2;
+  if (renderBrandId === "apple") {
     drawAppleMark(
       context,
-      outputWidth - horizontalInset - markSize,
-      metadataTop + metaHeight * 0.2,
+      dividerX - markSize * 1.6,
+      metadataTop + metaHeight * 0.18,
       markSize,
       preset.value.foreground,
     );
   } else {
+    context.setTextAlign("right");
     context.setFontSize(Math.round(smallFont * 1.15));
-    context.fillText(brand.value.shortName, outputWidth - horizontalInset, metadataTop + metaHeight * 0.22);
+    context.fillText(renderBrand.shortName, dividerX - markSize * 0.5, metadataTop + metaHeight * 0.25);
   }
 
+  context.setStrokeStyle(preset.value.muted);
+  context.setLineWidth(Math.max(2, outputWidth * 0.002));
+  context.beginPath();
+  context.moveTo(dividerX, metadataTop + metaHeight * 0.2);
+  context.lineTo(dividerX, metadataTop + metaHeight * 0.8);
+  context.stroke();
+
   if (settings.showParameters) {
+    context.setTextAlign("left");
+    context.setFillStyle(preset.value.foreground);
+    context.setFontSize(smallFont);
+    context.fillText(captureLine, dividerX + smallFont, metadataTop + metaHeight * 0.28);
     context.setFillStyle(preset.value.muted);
     context.setFontSize(tinyFont);
-    context.fillText(
-      parameterLine.value,
-      outputWidth - horizontalInset,
-      metadataTop + metaHeight * 0.58,
-    );
+    context.fillText(location, dividerX + smallFont, metadataTop + metaHeight * 0.58);
   }
 
   await new Promise<void>((resolve) => context.draw(false, resolve));
@@ -415,7 +504,7 @@ onShow(restore);
       </view>
 
       <text class="workbench-header__description">
-        把照片装进一张会说话的相纸。品牌、参数与署名均在本地完成。
+        选择原图，自动读取设备、时间、曝光参数与 GPS，并生成经典相机信息条。
       </text>
 
       <view class="preview-stage">
@@ -434,7 +523,7 @@ onShow(restore);
           <view class="photo-frame__meta">
             <view class="photo-frame__identity">
               <text class="photo-frame__model">{{ settings.model }}</text>
-              <text class="photo-frame__signature">{{ settings.signature }}</text>
+              <text class="photo-frame__signature">{{ settings.capturedAt }}</text>
             </view>
             <view class="photo-frame__capture">
               <image
@@ -444,9 +533,11 @@ onShow(restore);
                 mode="aspectFit"
               />
               <text v-else class="photo-frame__wordmark">{{ brand.shortName }}</text>
-              <text v-if="settings.showParameters" class="photo-frame__parameters">
-                {{ parameterLine }}
-              </text>
+              <view class="photo-frame__divider" />
+              <view v-if="settings.showParameters" class="photo-frame__details">
+                <text class="photo-frame__parameters">{{ parameterLine }}</text>
+                <text class="photo-frame__location">{{ settings.location }}</text>
+              </view>
             </view>
           </view>
         </view>
@@ -465,7 +556,7 @@ onShow(restore);
               v-for="(photo, index) in photos"
               :key="photo.id"
               :class="['photo-thumb', { 'photo-thumb--active': selectedPhotoIndex === index }]"
-              @click="selectedPhotoIndex = index"
+              @click="selectPhoto(index)"
             >
               <image :src="photo.path" mode="aspectFill" />
               <button class="photo-thumb__remove" @click.stop="removePhoto(index)">×</button>
@@ -515,7 +606,7 @@ onShow(restore);
             </view>
             <slider
               :value="settings.framePercent"
-              min="2"
+              min="0"
               max="18"
               active-color="#e98a3f"
               background-color="#42423e"
@@ -563,17 +654,25 @@ onShow(restore);
         <view v-else class="editor-content form-stack">
           <label class="field-row">
             <text>设备型号</text>
-            <input v-model="settings.model" maxlength="32" @blur="save" />
+            <input v-model="settings.model" maxlength="32" @blur="saveMetadataEdits" />
           </label>
           <label class="field-row">
-            <text>个人署名</text>
-            <input v-model="settings.signature" maxlength="32" @blur="save" />
+            <text>拍摄时间</text>
+            <input v-model="settings.capturedAt" maxlength="24" @blur="saveMetadataEdits" />
           </label>
+          <label class="field-row">
+            <text>经纬度</text>
+            <input v-model="settings.location" maxlength="48" @blur="saveMetadataEdits" />
+          </label>
+          <view v-if="currentPhoto" class="metadata-status">
+            <text class="metadata-status__dot" />
+            <text>{{ metadataStatusText }}</text>
+          </view>
           <view class="parameter-grid">
-            <label><text>焦距</text><input v-model="settings.focalLength" maxlength="12" @blur="save" /></label>
-            <label><text>光圈</text><input v-model="settings.aperture" maxlength="12" @blur="save" /></label>
-            <label><text>快门</text><input v-model="settings.shutter" maxlength="12" @blur="save" /></label>
-            <label><text>感光度</text><input v-model="settings.iso" maxlength="12" @blur="save" /></label>
+            <label><text>焦距</text><input v-model="settings.focalLength" maxlength="12" @blur="saveMetadataEdits" /></label>
+            <label><text>光圈</text><input v-model="settings.aperture" maxlength="12" @blur="saveMetadataEdits" /></label>
+            <label><text>快门</text><input v-model="settings.shutter" maxlength="12" @blur="saveMetadataEdits" /></label>
+            <label><text>感光度</text><input v-model="settings.iso" maxlength="12" @blur="saveMetadataEdits" /></label>
           </view>
           <button class="parameter-toggle" @click="toggleParameters">
             <text>显示拍摄参数</text>
@@ -586,7 +685,7 @@ onShow(restore);
 
       <view class="privacy-note">
         <text class="privacy-note__mark">LOCAL</text>
-        <text>原图、署名和导出结果默认只在你的设备上处理。</text>
+        <text>EXIF 解析、原图和导出结果均在你的设备上处理；没有元数据时可手动填写。</text>
       </view>
     </view>
 
@@ -613,13 +712,17 @@ onShow(restore);
 .preview-stage__rail { position: absolute; top: 16rpx; right: 20rpx; left: 20rpx; display: flex; justify-content: space-between; color: rgba(244,239,228,.36); font-family: "Courier New", monospace; font-size: 16rpx; letter-spacing: .14em; }
 .photo-frame { position: relative; width: 100%; overflow: hidden; transition: padding 180ms ease, background 180ms ease; }
 .photo-frame__image { display: block; width: 100%; }
-.photo-frame__meta { position: absolute; right: 0; bottom: 0; left: 0; display: flex; min-height: 52rpx; align-items: center; justify-content: space-between; gap: 18rpx; padding: 0 18rpx 8rpx; }
+.photo-frame__meta { position: absolute; right: 0; bottom: 0; left: 0; display: flex; min-height: 84rpx; align-items: center; justify-content: space-between; gap: 18rpx; padding: 4rpx 34rpx 8rpx; }
 .photo-frame__identity, .photo-frame__capture { display: flex; min-width: 0; flex-direction: column; }
-.photo-frame__capture { align-items: flex-end; }
+.photo-frame__capture { flex: 0 1 58%; align-items: center; justify-content: flex-end; flex-direction: row; gap: 14rpx; }
 .photo-frame__model { overflow: hidden; font-family: "Georgia", "Times New Roman", serif; font-size: 17rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.photo-frame__signature, .photo-frame__parameters { margin-top: 4rpx; font-family: "Courier New", monospace; font-size: 12rpx; letter-spacing: .03em; opacity: .55; white-space: nowrap; }
-.photo-frame__logo { width: 62rpx; height: 25rpx; }
+.photo-frame__signature, .photo-frame__parameters, .photo-frame__location { margin-top: 4rpx; font-family: "Courier New", monospace; font-size: 12rpx; letter-spacing: .01em; white-space: nowrap; }
+.photo-frame__signature, .photo-frame__location { opacity: .55; }
+.photo-frame__logo { width: 52rpx; height: 42rpx; flex: none; }
 .photo-frame__wordmark { font-family: "Times New Roman", serif; font-size: 19rpx; font-weight: 800; }
+.photo-frame__divider { width: 2rpx; height: 54rpx; flex: none; background: currentColor; opacity: .16; }
+.photo-frame__details { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; overflow: hidden; }
+.photo-frame__parameters, .photo-frame__location { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .empty-preview { display: flex; width: 100%; min-height: 650rpx; margin: 0; padding: 60rpx 30rpx; align-items: center; justify-content: center; flex-direction: column; border: 1px dashed rgba(244,239,228,.24); border-radius: 0; background: radial-gradient(circle at 50% 40%, #34342f, #171714 58%); color: #f4efe4; }
 .empty-preview__aperture { position: relative; width: 124rpx; height: 124rpx; margin-bottom: 36rpx; border: 1px solid rgba(233,138,63,.42); border-radius: 50%; }
 .empty-preview__blade { position: absolute; top: 50%; left: 50%; width: 48rpx; height: 2px; background: #e98a3f; transform-origin: 0 50%; }
@@ -662,6 +765,8 @@ onShow(restore);
 .parameter-grid label { padding: 18rpx; background: #23231f; }
 .parameter-grid text { display: block; color: rgba(244,239,228,.38); font-size: 18rpx; }
 .parameter-grid input { height: 54rpx; color: #f4efe4; font-family: "Courier New", monospace; font-size: 25rpx; }
+.metadata-status { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 18rpx; border: 1px solid rgba(233,138,63,.18); background: rgba(233,138,63,.06); color: rgba(244,239,228,.58); font-size: 19rpx; line-height: 1.45; }
+.metadata-status__dot { width: 8rpx; height: 8rpx; flex: none; border-radius: 50%; background: #e98a3f; box-shadow: 0 0 0 6rpx rgba(233,138,63,.1); }
 .parameter-toggle { display: flex; height: 82rpx; margin: 0; padding: 0 20rpx; align-items: center; justify-content: space-between; border-radius: 0; background: #23231f; color: #f4efe4; font-size: 23rpx; }
 .switch-track { width: 76rpx; height: 42rpx; padding: 5rpx; border-radius: 999px; background: #44443f; transition: background 160ms ease; }
 .switch-track__thumb { width: 32rpx; height: 32rpx; border-radius: 50%; background: #eee9df; transition: transform 160ms ease; }

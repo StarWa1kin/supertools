@@ -56,6 +56,9 @@ importers:
       '@dcloudio/uni-mp-weixin':
         specifier: 3.0.0-5020420260813003
         version: 3.0.0-5020420260813003(@vueuse/core@14.3.0(vue@3.5.41(typescript@4.9.5)))(debug@4.4.3(supports-color@5.5.0))(postcss@8.5.26)(rollup@4.62.4)(supports-color@5.5.0)(vue@3.5.41(typescript@4.9.5))
+      exifr:
+        specifier: ^7.1.3
+        version: 7.1.3
       vue:
         specifier: ^3.4.21
         version: 3.5.41(typescript@4.9.5)
@@ -2119,6 +2122,9 @@ packages:
 
   exif-parser@0.1.12:
     resolution: {integrity: sha512-c2bQfLNbMzLPmzQuOr8fy0csy84WmwnER81W88DzTp9CYNPJ6yzOj2EZAh9pywYpqHnshVLHQJ8WzldAyfY+Iw==}
+
+  exifr@7.1.3:
+    resolution: {integrity: sha512-g/aje2noHivrRSLbAUtBPWFbxKdKhgj/xr1vATDdUXPOFYJlQ62Ft0oy+72V6XLIpDJfHs6gXLbBLAolqOXYRw==}
 
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
@@ -5797,6 +5803,8 @@ snapshots:
   etag@1.8.1: {}
 
   exif-parser@0.1.12: {}
+
+  exifr@7.1.3: {}
 
   expect-type@1.4.0: {}
 
