@@ -69,6 +69,62 @@ describe("useVideoParser", () => {
     ]);
   });
 
+  it.each([
+    ["视频号 https://weixin.qq.com/sph/example 分享", "https://weixin.qq.com/sph/example"],
+    ["https://example.org/video", "https://example.org/video"],
+    ["普通文字", "普通文字"],
+    ["ftp://example.org/video", "ftp://example.org/video"],
+    ["", ""],
+    ["   ", ""],
+    ["x".repeat(2049), "x".repeat(2049)],
+  ])("delegates input validation to the backend: %s", async (input, url) => {
+    const storage = new Map<string, unknown>();
+    const request = vi.fn((options) => options.success({
+      statusCode: 422,
+      data: { detail: { code: "invalid_link", message: "后端校验提示" } },
+    }));
+    vi.stubGlobal("uni", baseUni({
+      request,
+      getStorageSync: vi.fn((key: string) => storage.get(key)),
+      setStorageSync: vi.fn((key: string, value: unknown) => storage.set(key, value)),
+    }));
+    const parser = useVideoParser();
+    parser.shareText.value = input;
+
+    await parser.submit();
+
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "POST",
+      data: { url },
+    }));
+    expect(parser.error.value).toBe("后端校验提示");
+    expect(parser.loading.value).toBe(false);
+    expect(getVideoParserHistory()).toEqual([
+      expect.objectContaining({ platform: "unknown", url, status: "failed" }),
+    ]);
+  });
+
+  it("retains the upstream platform in history without a platform allowlist", async () => {
+    const storage = new Map<string, unknown>();
+    vi.stubGlobal("uni", baseUni({
+      request: vi.fn((options) => options.success({
+        statusCode: 200,
+        data: { ...result, platform: "视频号" },
+      })),
+      getStorageSync: vi.fn((key: string) => storage.get(key)),
+      setStorageSync: vi.fn((key: string, value: unknown) => storage.set(key, value)),
+    }));
+    const parser = useVideoParser();
+    parser.shareText.value = "https://weixin.qq.com/sph/example";
+
+    await parser.submit();
+
+    expect(parser.result.value?.platform).toBe("视频号");
+    expect(getVideoParserHistory()).toEqual([
+      expect.objectContaining({ platform: "视频号", status: "success" }),
+    ]);
+  });
+
   it("copies the parsed caption separately from the media URL", async () => {
     const setClipboardData = vi.fn(async () => undefined);
     vi.stubGlobal("uni", baseUni({ setClipboardData }));

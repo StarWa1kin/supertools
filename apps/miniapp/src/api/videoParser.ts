@@ -1,6 +1,7 @@
 import { request } from "./client";
 
-export type VideoPlatform = "douyin" | "kuaishou" | "xiaohongshu";
+// Platform identifiers are supplied by the configured parser service.
+export type VideoPlatform = string;
 export type MediaKind = "video" | "image";
 
 export interface VideoAuthor {
@@ -30,6 +31,7 @@ export function resolveVideo(url: string) {
   return request<VideoResolveResult>({
     url: "/api/v1/video-parser/resolve",
     method: "POST",
+    timeout: 120_000,
     data: { url },
   });
 }

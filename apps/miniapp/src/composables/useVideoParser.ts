@@ -130,14 +130,9 @@ export function useVideoParser() {
   }
 
   async function submit() {
-    if (!shareUrl.value) {
-      error.value = "请粘贴包含 http 或 https 链接的分享文案";
-      return;
-    }
-    if (!detectedPlatform.value) {
-      error.value = "暂不支持该分享链接，请更换其他公开链接";
-      return;
-    }
+    // URL extraction is a convenience, not validation. Let the API decide
+    // whether an unknown platform, malformed input, or empty value is supported.
+    const input = shareUrl.value ?? shareText.value.trim();
     loading.value = true;
     error.value = "";
     saveStatus.value = "";
@@ -145,14 +140,15 @@ export function useVideoParser() {
     result.value = undefined;
     const historyId = addVideoParserHistory(
       shareText.value,
-      shareUrl.value,
-      detectedPlatform.value,
+      input,
+      detectedPlatform.value ?? "unknown",
     );
     try {
-      result.value = await resolveVideo(shareUrl.value);
+      result.value = await resolveVideo(input);
       activeResultView.value = "media";
       updateVideoParserHistory(historyId, {
         status: "success",
+        platform: result.value.platform,
         title: result.value.title,
       });
     } catch (reason) {

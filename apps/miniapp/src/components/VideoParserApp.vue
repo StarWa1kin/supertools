@@ -92,14 +92,14 @@ onShow(() => {
       <textarea
         v-model="shareText"
         class="share-field"
-        maxlength="2048"
+        :maxlength="-1"
         placeholder="粘贴平台分享文案或 https:// 链接"
         placeholder-class="share-placeholder"
       />
       <button
         class="parse-button mt-4"
-        :class="{ 'parse-button--disabled': loading || !shareText.trim() }"
-        :disabled="loading || !shareText.trim()"
+        :class="{ 'parse-button--disabled': loading }"
+        :disabled="loading"
         :loading="loading"
         @click="submit"
       >

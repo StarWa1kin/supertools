@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 from app.core.schemas import ApiModel
 
@@ -9,7 +9,9 @@ class VideoResolveRequest(ApiModel):
     url: str = Field(min_length=1, max_length=2048)
 
 
-VideoPlatform = Literal["douyin", "kuaishou", "xiaohongshu"]
+VideoPlatform = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
+]
 MediaKind = Literal["video", "image"]
 
 

@@ -1,8 +1,9 @@
 import tempfile
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import Field
+from pydantic import AnyHttpUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 SERVER_ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +84,16 @@ class Settings(BaseSettings):
     )
     deploy_service_url: str = Field(default="", alias="DEPLOY_SERVICE_URL")
     deploy_service_token: str = Field(default="", alias="DEPLOY_SERVICE_TOKEN")
+    video_parser_backend: Literal["native", "media_parser"] = Field(
+        default="native", alias="VIDEO_PARSER_BACKEND"
+    )
+    media_parser_base_url: AnyHttpUrl = Field(
+        default="http://127.0.0.1:8051", alias="MEDIA_PARSER_BASE_URL"
+    )
+    media_parser_api_key: SecretStr = Field(default="", alias="MEDIA_PARSER_API_KEY")
+    media_parser_timeout_seconds: float = Field(
+        default=95, alias="MEDIA_PARSER_TIMEOUT_SECONDS", gt=0, le=110
+    )
     video_parser_timeout_seconds: float = Field(
         default=15.0,
         alias="VIDEO_PARSER_TIMEOUT_SECONDS",

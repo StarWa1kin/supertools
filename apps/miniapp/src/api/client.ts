@@ -33,7 +33,7 @@ export function request<T>(options: UniApp.RequestOptions): Promise<T> {
     uni.request({
       ...options,
       url: resolveApiUrl(options.url),
-      timeout: 30_000,
+      timeout: options.timeout ?? 30_000,
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data as T);

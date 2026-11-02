@@ -21,7 +21,7 @@ def host_matches(hostname: str, allowed: str) -> bool:
     return hostname == allowed or hostname.endswith(f".{allowed}")
 
 
-def normalize_public_url(url: str, allowed_hosts: tuple[str, ...] | list[str]) -> str:
+def normalize_public_url(url: str, allowed_hosts: tuple[str, ...] | list[str] | None = None) -> str:
     try:
         parsed = urlsplit(url.strip())
         port = parsed.port
@@ -31,16 +31,30 @@ def normalize_public_url(url: str, allowed_hosts: tuple[str, ...] | list[str]) -
     hostname = (parsed.hostname or "").lower().rstrip(".")
     if parsed.scheme not in {"http", "https"} or not hostname:
         raise invalid_link("仅支持有效的 HTTP 或 HTTPS 分享链接")
-    if parsed.username or parsed.password:
+    if parsed.username is not None or parsed.password is not None:
         raise invalid_link("分享链接不能包含登录凭据")
     if port is not None and port not in {80, 443}:
         raise invalid_link("分享链接端口不受支持")
-    if not any(host_matches(hostname, host) for host in allowed_hosts):
+    if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal")):
+        raise invalid_link("链接指向了不允许访问的网络地址")
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        try:
+            # inet_aton also recognizes shortened, integer and hexadecimal IPv4.
+            address = ipaddress.ip_address(socket.inet_aton(hostname))
+        except OSError:
+            address = None
+    if address is not None and not _is_public_ip(str(address)):
+        raise invalid_link("链接指向了不允许访问的网络地址")
+    if allowed_hosts is not None and not any(
+        host_matches(hostname, host) for host in allowed_hosts
+    ):
         raise invalid_link("链接域名不属于所选平台")
 
-    netloc = hostname
+    netloc = f"[{hostname}]" if ":" in hostname else hostname
     if port is not None:
-        netloc = f"{hostname}:{port}"
+        netloc = f"{netloc}:{port}"
     return urlunsplit((parsed.scheme, netloc, parsed.path or "/", parsed.query, ""))
 
 

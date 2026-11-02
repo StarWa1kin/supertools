@@ -132,7 +132,12 @@ class MediaProxy:
         )
 
     async def _open(self, url: str, *, range_header: str | None) -> httpx.Response:
-        current = normalize_public_url(url, self.settings.video_media_allowed_hosts)
+        allowed_hosts = (
+            None
+            if self.settings.video_parser_backend == "media_parser"
+            else self.settings.video_media_allowed_hosts
+        )
+        current = normalize_public_url(url, allowed_hosts)
         headers = {"Range": range_header} if range_header else None
         for redirect_count in range(self.settings.video_parser_max_redirects + 1):
             if self.settings.video_parser_resolve_dns:

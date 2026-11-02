@@ -25,7 +25,9 @@ function isHistoryItem(value: unknown): value is VideoParserHistoryItem {
     typeof item.createdAt === "number" &&
     typeof item.input === "string" &&
     typeof item.url === "string" &&
-    ["douyin", "kuaishou", "xiaohongshu"].includes(item.platform || "") &&
+    typeof item.platform === "string" &&
+    item.platform.trim().length > 0 &&
+    item.platform.length <= 100 &&
     ["pending", "success", "failed"].includes(item.status || "")
   );
 }
@@ -66,7 +68,7 @@ export function addVideoParserHistory(
 
 export function updateVideoParserHistory(
   id: string,
-  patch: Partial<Pick<VideoParserHistoryItem, "status" | "title" | "error">>,
+  patch: Partial<Pick<VideoParserHistoryItem, "status" | "title" | "error" | "platform">>,
 ) {
   try {
     saveHistory(

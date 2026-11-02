@@ -14,6 +14,13 @@ from app.domains.video_parser.service import VideoParserService, detect_platform
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def use_native_parser(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Native fixtures must not call a locally configured, credit-consuming upstream.
+    settings = Settings(_env_file=None, VIDEO_PARSER_BACKEND="native")
+    monkeypatch.setattr("app.domains.video_parser.service.get_settings", lambda: settings)
+
+
 def fixture(name: str) -> str:
     return (FIXTURES / name).read_text(encoding="utf-8")
 
