@@ -1,6 +1,4 @@
-const apiBaseUrl = (
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
-).replace(/\/$/, "");
+import { getApiBaseUrl } from "./apiEnv";
 
 interface ApiErrorBody {
   detail?:
@@ -25,7 +23,7 @@ export function resolveApiUrl(path: string) {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
-  return `${apiBaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export function request<T>(options: UniApp.RequestOptions): Promise<T> {

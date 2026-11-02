@@ -27,9 +27,10 @@ sh scripts/dev-media-parser.sh
 `MEDIA_PARSER_API_KEY` 中填写对应 Key。还可用 `MEDIA_PARSER_PROJECT_DIR`、
 `MEDIA_PARSER_PYTHON`、`MEDIA_PARSER_PORT` 自定义启动路径和端口；变更端口时同步修改基础地址。
 
-随后启动或重启 FastAPI 和 H5 开发服务。本地小程序开发配置使用
-`apps/miniapp/.env.development.local` 中的 `VITE_API_BASE_URL=http://127.0.0.1:8000`，
-不影响生产构建。真机调试需换成电脑可访问的局域网地址，并配置相应调试域名。
+随后启动或重启 FastAPI 和 H5 开发服务。本地小程序开发默认使用
+`apps/miniapp/.env.development` 中的 `VITE_API_BASE_URL=http://127.0.0.1:8000`，
+不影响生产构建。真机调试需在 `.env.development.local` 中换成电脑可访问的局域网地址，
+环境切换说明见根目录 README 的「小程序接口环境」。
 解析请求单独等待 120 秒，其余 API 仍默认 30 秒。
 
 本项目不维护分享平台白名单，由上游识别平台并判断是否支持。

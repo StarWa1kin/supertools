@@ -19,3 +19,8 @@ dist
 *.njsproj
 *.sln
 *.sw?
+# 小程序只读取 VITE_ 公开变量，以下环境文件需要提交；个人覆盖仍使用 *.local。
+!.env
+!.env.development
+!.env.remote
+!.env.production

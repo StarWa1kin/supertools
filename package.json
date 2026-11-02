@@ -6,7 +6,9 @@
   "scripts": {
     "dev:admin": "pnpm --dir apps/admin dev",
     "dev:miniapp": "pnpm --dir apps/miniapp dev:mp-weixin",
+    "dev:miniapp:remote": "pnpm --dir apps/miniapp dev:mp-weixin:remote",
     "dev:h5": "pnpm --dir apps/miniapp dev:h5",
+    "dev:h5:remote": "pnpm --dir apps/miniapp dev:h5:remote",
     "build:miniapp": "pnpm --dir apps/miniapp build:mp-weixin",
     "check:miniapp": "pnpm --dir apps/miniapp check",
     "test:miniapp": "pnpm --dir apps/miniapp test",

@@ -31,6 +31,18 @@ uv sync --dev
 uv run fastapi dev
 ```
 
+### 小程序接口环境
+
+| 命令 | 连接的 API | 配置文件 |
+| --- | --- | --- |
+| `pnpm dev:miniapp` / `pnpm dev:h5` | 本地 `http://127.0.0.1:8000` | `.env.development`（个人覆盖写 `.env.development.local`） |
+| `pnpm dev:miniapp:remote` / `pnpm dev:h5:remote` | 线上 `https://api.devhooks.cn` | `.env.remote` |
+| `pnpm build:miniapp` | 线上，必须为 HTTPS，否则构建失败 | `.env.production` |
+
+以上文件都在 `apps/miniapp/` 下，只能放 `VITE_` 公开地址。开发版和体验版小程序可在「更多」页长按底部状态栏，在 `.env` 配置的预设（本地、局域网、线上）之间切换，切换后自动重启到首页；正式版忽略该设置。
+
+真机调试时手机访问不到 `127.0.0.1`：在 `.env.development.local` 中填写电脑的局域网地址（可参考 `.env.example`），用 `uv run fastapi dev app/main.py --host 0.0.0.0` 启动后端，并在真机调试面板中打开「开发调试」以允许非合法域名。
+
 API 文档位于 `http://127.0.0.1:8000/docs`。复制前后端 `.env.example` 为 `.env` 后再修改本地配置，禁止提交真实密钥。
 
 Codex 情报管理端默认位于 `http://127.0.0.1:5174`，开发账号为 `admin`、密码为 `come2u`。部署前必须通过 `ADMIN_USERNAME`、`ADMIN_PASSWORD` 和 `ADMIN_TOKEN_SECRET` 更换默认凭据。

@@ -7,6 +7,7 @@ import {
 
 import ToolAppIcon from "../../components/ToolAppIcon.vue";
 import ThemeSwitcher from "../../components/ThemeSwitcher.vue";
+import { useApiEnvSwitch } from "../../composables/useApiEnvSwitch";
 import { createPageShare } from "../../composables/usePageShare";
 import { useTheme } from "../../composables/useTheme";
 import { usePrimaryApp } from "../../composables/usePrimaryApp";
@@ -21,6 +22,7 @@ const availableCount = apps.filter((app) => isAppAvailable(app)).length;
 const developingCount = apps.length - availableCount;
 const { themeClass } = useTheme();
 const { primaryAppId, refreshPrimaryApp, setPrimaryApp } = usePrimaryApp();
+const { apiEnvSwitchable, apiEnvLabel, openApiEnvSwitcher } = useApiEnvSwitch();
 let suppressNextOpen = false;
 
 const pageShare = createPageShare({
@@ -151,12 +153,15 @@ onShow(refreshPrimaryApp);
       >
     </view>
 
-    <view class="library-footer">
+    <view class="library-footer" @longpress="openApiEnvSwitcher">
       <view class="library-footer__line" />
       <text v-if="developingCount > 0">
         {{ availableCount }} READY / {{ developingCount }} IN DEV
       </text>
       <text v-else>{{ apps.length }} APPS / READY</text>
+      <text v-if="apiEnvSwitchable" class="library-footer__api">
+        API · {{ apiEnvLabel }}
+      </text>
     </view>
   </view>
 </template>
@@ -458,6 +463,13 @@ onShow(refreshPrimaryApp);
   height: 1px;
   flex: 1;
   background: currentColor;
+}
+
+.library-footer__api {
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @keyframes app-arrive {

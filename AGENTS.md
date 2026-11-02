@@ -60,6 +60,7 @@ interface ToolApp {
 - `pnpm install`：安装依赖。
 - `pnpm --dir apps/miniapp dev:mp-weixin`：启动微信小程序开发构建。
 - `pnpm --dir apps/miniapp dev:h5`：启动 H5 调试服务。
+- `pnpm --dir apps/miniapp dev:mp-weixin:remote`、`dev:h5:remote`：本地开发构建连接线上 API（`.env.remote`）。
 - `pnpm --dir apps/miniapp build:mp-weixin`：生成小程序生产包。
 - `pnpm --dir apps/miniapp lint`：运行 TypeScript/Vue 类型检查。
 - `pnpm --dir apps/miniapp test`：运行 Vitest 单元测试。
