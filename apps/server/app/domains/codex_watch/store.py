@@ -56,9 +56,7 @@ class CodexWatchConfigStore:
                 update={
                     "reminder": config.reminder.model_copy(
                         update={
-                            "app_secret": self._decrypt_secret_value(
-                                config.reminder.app_secret
-                            )
+                            "app_secret": self._decrypt_secret_value(config.reminder.app_secret)
                         }
                     )
                 }
@@ -74,9 +72,9 @@ class CodexWatchConfigStore:
             return ""
         if self._cipher is None:
             raise OSError("未配置 REMINDER_SECRET_ENCRYPTION_KEY，无法加密 AppSecret")
-        return self._encrypted_secret_prefix + self._cipher.encrypt(
-            secret.encode("utf-8")
-        ).decode("utf-8")
+        return self._encrypted_secret_prefix + self._cipher.encrypt(secret.encode("utf-8")).decode(
+            "utf-8"
+        )
 
     def _read(self) -> CodexWatchConfig:
         try:

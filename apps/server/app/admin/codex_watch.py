@@ -43,9 +43,7 @@ def protect_reminder_secret(
     config: CodexWatchConfig, store: CodexWatchConfigStore
 ) -> AdminCodexWatchConfig:
     payload = config.model_dump()
-    payload["reminder"]["app_secret"] = store.encrypt_secret_for_client(
-        config.reminder.app_secret
-    )
+    payload["reminder"]["app_secret"] = store.encrypt_secret_for_client(config.reminder.app_secret)
     payload["reminder_secret_configured"] = bool(config.reminder.app_secret)
     return AdminCodexWatchConfig.model_validate(payload)
 
@@ -102,10 +100,7 @@ async def list_reminder_subscriptions(
         subscriptions = await get_reminder_store().list_subscriptions()
     except OSError as exc:
         raise HTTPException(status_code=503, detail="订阅记录暂时无法读取，请稍后重试") from exc
-    return [
-        subscription_summary(item, config.reminder.template_id)
-        for item in subscriptions
-    ]
+    return [subscription_summary(item, config.reminder.template_id) for item in subscriptions]
 
 
 @router.post("/reminder-subscriptions/{subscription_id}/test", response_model=ReminderTestResponse)
