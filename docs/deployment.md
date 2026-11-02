@@ -4,7 +4,6 @@
 
 - `server`：Python 3.12 + FastAPI，仅绑定宿主机 `127.0.0.1:8000`，由 `api.devhooks.cn` 反向代理。
 - `admin`：Vue 管理端的生产构建，由容器内 Nginx 提供静态文件，仅绑定宿主机 `127.0.0.1:8080`，由 `admin.devhooks.cn` 反向代理。
-- `deployer`：仅在 Compose 内网提供部署控制，挂载仓库和 Docker socket，供登录后的管理端触发固定发布流程。
 
 小程序不在服务器上构建。小程序开发者工具继续使用自己的构建和上传流程，接口基地址使用 `https://api.devhooks.cn`；请求封装会自行拼接 `/api/v1/...`。
 
@@ -21,7 +20,7 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-必须修改 `ADMIN_PASSWORD`、`ADMIN_TOKEN_SECRET`、`REMINDER_SECRET_ENCRYPTION_KEY`、`DEPLOY_SERVICE_TOKEN` 和 `VIDEO_MEDIA_SIGNING_SECRET`。`REMINDER_SECRET_ENCRYPTION_KEY` 用于加密数据卷中保存的微信 AppSecret，必须是独立的长随机值，且后续不得随意更换；更换后将无法解密既有配置。`DEPLOY_SERVICE_TOKEN` 建议使用独立的 32 字节以上随机值，不能与管理员令牌密钥复用。私有 SSH 仓库还需将 `DEPLOY_SSH_DIR` 指向宿主机部署账号的 `.ssh` 目录，其中应包含只读部署密钥和 `known_hosts`。`APP_CORS_ORIGINS` 需要包含 `https://admin.devhooks.cn`。不要把 `.env.production` 提交到 Git。
+必须修改 `ADMIN_PASSWORD`、`ADMIN_TOKEN_SECRET`、`REMINDER_SECRET_ENCRYPTION_KEY` 和 `VIDEO_MEDIA_SIGNING_SECRET`。`REMINDER_SECRET_ENCRYPTION_KEY` 用于加密数据卷中保存的微信 AppSecret，必须是独立的长随机值，且后续不得随意更换；更换后将无法解密既有配置。`APP_CORS_ORIGINS` 需要包含 `https://admin.devhooks.cn`。不要把 `.env.production` 提交到 Git。
 
 ### 出站代理（可选）
 
@@ -30,14 +29,13 @@ nano .env.production
 ```ini
 HTTP_PROXY=http://host.docker.internal:7890
 HTTPS_PROXY=http://host.docker.internal:7890
-NO_PROXY=localhost,127.0.0.1,deployer,api.weixin.qq.com
+NO_PROXY=localhost,127.0.0.1,api.weixin.qq.com
 ```
 
-`server` 和 `deployer` 容器均会将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向当前容器自身。微信 API 应保留在 `NO_PROXY` 中直连，避免部分代理提前断开 HTTPS 连接。Python 的 HTTP 客户端会自动读取这些标准环境变量，Admin 的隔离构建容器也会继承它们。修改后重新创建 API 和部署器容器：
+`server` 容器会将 `host.docker.internal` 映射到 Docker 宿主机；不要填写 `127.0.0.1:7890`，它在容器中指向当前容器自身。微信 API 应保留在 `NO_PROXY` 中直连，避免部分代理提前断开 HTTPS 连接。Python 的 HTTP 客户端会自动读取这些标准环境变量，Admin 的隔离构建容器也会继承它们。修改后重新创建 API 容器：
 
 ```bash
 docker compose --env-file .env.production up -d --force-recreate server
-docker compose --env-file .env.production up -d --force-recreate deployer
 docker compose --env-file .env.production exec server python -c "import httpx; print(httpx.get('https://codex-reset.com', timeout=10).status_code)"
 ```
 
@@ -51,19 +49,6 @@ docker compose --env-file .env.production logs -f --tail=100 server admin
 curl http://127.0.0.1:8000/health
 curl -I http://127.0.0.1:8080/
 ```
-
-首次启用管理端一键部署，或者从不包含 `deployer` 的旧版本升级时，必须先在服务器执行一次完整引导。尚未运行的部署器无法自行完成这个步骤：
-
-```bash
-git pull --ff-only
-docker compose --env-file .env.production build server admin deployer
-docker compose --env-file .env.production up -d --remove-orphans
-docker compose --env-file .env.production ps
-```
-
-确认 `server`、`admin` 和 `deployer` 都为 running/healthy 后，管理端可分别点击“部署 Server”或“部署 Admin”。两种操作都会固定执行 `git pull --ff-only`，但只构建、更新并健康检查所选服务。管理端构建会在临时内存文件系统中从当前源码重新构建，以避开部分宿主机 Docker 存储层的写入限制；若构建失败，部署任务会明确失败，不会回退发布仓库中的旧静态产物。部署器不映射宿主机端口，且不会接受管理端传入的自定义命令。
-
-部署页的“运行中版本”会显示 Admin 和 API 容器实际使用镜像的 Git 提交短号与构建时间（UTC 自动换算为浏览器本地时间）。这些数据来自运行中容器的镜像标签，而非页面缓存或一次性部署日志；因此可用于确认新镜像已经真正启动。首次升级到包含此功能的版本后，需要先按上面的完整引导流程重建 `deployer`，随后通过管理端重新部署各目标服务一次；历史镜像会显示“未识别”。
 
 API 和管理端默认仅监听服务器回环地址。将 `infra/nginx/sites/supertools.conf` 安装到宿主机 Nginx 后，为 `api.devhooks.cn` 和 `admin.devhooks.cn` 签发 HTTPS 证书。不要把 8000 或 8080 端口直接暴露到公网。
 

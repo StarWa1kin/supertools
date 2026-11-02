@@ -81,8 +81,6 @@ class Settings(BaseSettings):
         default=False,
         alias="REQUEST_LOG_TRUST_PROXY_HEADERS",
     )
-    deploy_service_url: str = Field(default="", alias="DEPLOY_SERVICE_URL")
-    deploy_service_token: str = Field(default="", alias="DEPLOY_SERVICE_TOKEN")
     media_parser_base_url: AnyHttpUrl = Field(
         default="http://127.0.0.1:8051", alias="MEDIA_PARSER_BASE_URL"
     )

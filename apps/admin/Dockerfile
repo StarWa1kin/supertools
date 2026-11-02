@@ -31,11 +31,6 @@ RUN --mount=type=tmpfs,target=/workspace,size=1073741824 \
 
 FROM nginx:1.27-alpine
 
-ARG APP_VERSION=dev
-ARG APP_DEPLOYED_AT=
-LABEL io.supertools.version=$APP_VERSION \
-    io.supertools.deployed-at=$APP_DEPLOYED_AT
-
 COPY infra/nginx/admin.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /output /usr/share/nginx/html
 

@@ -46,22 +46,6 @@ export interface AdminSession {
   username: string;
 }
 
-export type DeploymentState = "idle" | "running" | "succeeded" | "failed" | "unavailable";
-
-export interface DeploymentTarget {
-  version: string | null;
-  deployedAt: string | null;
-}
-
-export interface DeploymentStatus {
-  status: DeploymentState;
-  target?: "server" | "admin" | null;
-  startedAt: string | null;
-  finishedAt: string | null;
-  log: string;
-  targets?: Record<"server" | "admin", DeploymentTarget>;
-}
-
 export interface ReminderSubscription {
   id: string;
   openidMasked: string;

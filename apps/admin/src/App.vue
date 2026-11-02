@@ -6,7 +6,6 @@ import { useRoute, useRouter } from "vue-router";
 import AdminDashboard from "./components/AdminDashboard.vue";
 import LoginView from "./components/LoginView.vue";
 import { useAdminConfig } from "./composables/useAdminConfig";
-import { useDeployment } from "./composables/useDeployment";
 import { useRequestLogs } from "./composables/useRequestLogs";
 import { getReminderSubscriptions, sendReminderTest } from "./api";
 import type { ReminderSubscription, RequestLogQuery } from "./types";
@@ -14,7 +13,6 @@ import type { ReminderSubscription, RequestLogQuery } from "./types";
 const admin = useAdminConfig();
 const route = useRoute();
 const router = useRouter();
-const deployment = useDeployment(() => admin.token.value, admin.clearSession);
 const requestLogs = useRequestLogs(() => admin.token.value, admin.clearSession);
 const reminderSubscriptions = ref<ReminderSubscription[]>([]);
 const reminderLoading = ref(false);
@@ -30,12 +28,11 @@ async function handleLogin(payload: { username: string; password: string }) {
     await admin.signIn(payload.username, payload.password);
     const tasks = [
       admin.load(),
-      deployment.loadDeployment(),
       requestLogs.load(),
     ];
     if (route.name === "reminders") tasks.push(loadReminderSubscriptions());
     await Promise.all(tasks);
-    if (route.name === "login") await router.replace("/codex-watch/crawler");
+    if (route.name === "login") await router.replace("/codex-watch/tutorials");
     ElMessage.success("欢迎回来");
   } catch (error) {
     ElMessage.error(messageOf(error));
@@ -53,15 +50,6 @@ async function loadRequestLogs(query?: RequestLogQuery) {
 async function handleSave() {
   try {
     await admin.save();
-  } catch (error) {
-    ElMessage.error(messageOf(error));
-  }
-}
-
-async function handleDeploy(target: "server" | "admin") {
-  try {
-    await deployment.deploy(target);
-    ElMessage.success(`${target === "admin" ? "管理端" : "API 服务"}部署任务已启动`);
   } catch (error) {
     ElMessage.error(messageOf(error));
   }
@@ -110,7 +98,6 @@ onMounted(async () => {
   if (!admin.authenticated.value) return;
   try {
     await admin.load();
-    await deployment.loadDeployment();
     if (route.name === "reminders") await loadReminderSubscriptions();
     await requestLogs.load();
   } catch (error) {
@@ -139,8 +126,6 @@ watch(
     :username="admin.username.value"
     :loading="admin.loading.value"
     :saving="admin.saving.value"
-    :deployment="deployment.deployment.value"
-    :deploying="deployment.loadingDeployment.value"
     :reminder-subscriptions="reminderSubscriptions"
     :reminder-loading="reminderLoading"
     :reminder-error="reminderError"
@@ -154,8 +139,6 @@ watch(
     @move-tutorial="admin.moveTutorial"
     @enable-community="admin.enableCommunity"
     @disable-community="admin.disableCommunity"
-    @deploy="handleDeploy"
-    @refresh-deployment="deployment.loadDeployment"
     @refresh-reminders="handleRefreshReminders"
     @test-reminder="handleReminderTest"
     @refresh-request-logs="loadRequestLogs"

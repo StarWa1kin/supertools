@@ -15,12 +15,9 @@ import {
   Lock,
   Plus,
   Reading,
-  Setting,
   SwitchButton,
   Upload,
-  Promotion,
   Refresh,
-  CircleCheck,
   Warning,
   Bell,
   Operation,
@@ -28,7 +25,6 @@ import {
 
 import type {
   CodexWatchConfig,
-  DeploymentStatus,
   ReminderSubscription,
   RequestLogPage,
   RequestLogQuery,
@@ -40,8 +36,6 @@ const props = defineProps<{
   username: string;
   loading: boolean;
   saving: boolean;
-  deployment: DeploymentStatus;
-  deploying: boolean;
   reminderSubscriptions: ReminderSubscription[];
   reminderLoading: boolean;
   reminderError: string;
@@ -58,8 +52,6 @@ const emit = defineEmits<{
   moveTutorial: [index: number, offset: -1 | 1];
   enableCommunity: [];
   disableCommunity: [];
-  deploy: [target: "server" | "admin"];
-  refreshDeployment: [];
   refreshReminders: [];
   testReminder: [subscriptionId: string];
   refreshRequestLogs: [query?: RequestLogQuery];
@@ -67,14 +59,12 @@ const emit = defineEmits<{
 
 const route = useRoute();
 const router = useRouter();
-const keywordInput = ref("");
 const logStatus = ref<number | undefined>();
 const logPath = ref("");
 const logOffset = ref(0);
 const logLimit = 50;
 
 const intelligenceSections = [
-  { id: "crawler" as const, label: "采集策略", caption: "Crawler", icon: Setting },
   { id: "tutorials" as const, label: "AI 教程", caption: "Tutorials", icon: Reading },
   { id: "community" as const, label: "交流群", caption: "Community", icon: ChatLineRound },
   { id: "reminder-settings" as const, label: "提醒配置", caption: "WeChat", icon: Bell },
@@ -82,11 +72,10 @@ const intelligenceSections = [
 const operationsSections = [
   { id: "reminders" as const, label: "推送测试", caption: "Reminders", icon: Bell },
   { id: "logs" as const, label: "请求日志", caption: "Request logs", icon: Document },
-  { id: "deployment" as const, label: "一键部署", caption: "Deployment", icon: Promotion },
 ];
 const sections = [...intelligenceSections, ...operationsSections];
 
-const activeSection = computed<AdminSection>(() => (route.meta.section as AdminSection | undefined) ?? "crawler");
+const activeSection = computed<AdminSection>(() => (route.meta.section as AdminSection | undefined) ?? "tutorials");
 const current = computed(() => sections.find((item) => item.id === activeSection.value)!);
 const communityVisible = computed(() => Boolean(props.config.community?.qrCode));
 const isOperations = computed(() => operationsSections.some((item) => item.id === activeSection.value));
@@ -127,25 +116,6 @@ function formatLogTime(value: string) {
   }).format(new Date(value));
 }
 
-function addKeyword() {
-  const value = keywordInput.value.trim().toLowerCase();
-  if (!value || props.config.crawler.keywords.includes(value)) return;
-  if (props.config.crawler.keywords.length >= 30) {
-    ElMessage.warning("最多配置 30 个关键词");
-    return;
-  }
-  props.config.crawler.keywords.push(value);
-  keywordInput.value = "";
-}
-
-function removeKeyword(keyword: string) {
-  if (props.config.crawler.keywords.length === 1) {
-    ElMessage.warning("至少保留一个关键词");
-    return;
-  }
-  props.config.crawler.keywords = props.config.crawler.keywords.filter((item) => item !== keyword);
-}
-
 function updateCommunity(enabled: boolean) {
   if (enabled) emit("enableCommunity");
   else emit("disableCommunity");
@@ -184,11 +154,6 @@ async function removeTutorial(index: number) {
 }
 
 function submit() {
-  if (!props.config.crawler.account.trim()) {
-    router.push("/codex-watch/crawler");
-    ElMessage.error("请填写监控账号");
-    return;
-  }
   const invalidTutorial = props.config.tutorials.find((item) => !item.title.trim() || !/^https?:\/\//i.test(item.url));
   if (invalidTutorial) {
     router.push("/codex-watch/tutorials");
@@ -207,42 +172,6 @@ function formatUpdatedAt(value: string | null) {
     minute: "2-digit",
     hour12: false,
   }).format(new Date(value));
-}
-
-const deploymentLabel = computed(() => ({
-  idle: "尚未部署",
-  running: "部署进行中",
-  succeeded: "部署成功",
-  failed: "部署失败",
-  unavailable: "服务未配置",
-}[props.deployment.status]));
-
-const deploymentTargetLabel = computed(() => (
-  props.deployment.target === "admin" ? "管理端" : props.deployment.target === "server" ? "API 服务" : "服务"
-));
-
-function deployedVersion(target: "server" | "admin") {
-  return props.deployment.targets?.[target]?.version || "未识别";
-}
-
-function deployedAt(target: "server" | "admin") {
-  const value = props.deployment.targets?.[target]?.deployedAt;
-  return value ? formatUpdatedAt(value) : "尚无发布记录";
-}
-
-async function confirmDeploy(target: "server" | "admin") {
-  const targetLabel = target === "admin" ? "管理端" : "API 服务";
-  const buildTarget = target === "admin" ? "admin" : "server";
-  try {
-    await ElMessageBox.confirm(
-      `将拉取远程仓库最新提交，仅重新构建并启动${targetLabel}（${buildTarget}）。部署期间该服务可能短暂重连。`,
-      `确认部署${targetLabel}`,
-      { confirmButtonText: "开始部署", cancelButtonText: "取消", type: "warning" },
-    );
-    emit("deploy", target);
-  } catch {
-    // User cancelled the confirmation.
-  }
 }
 
 async function confirmReminderTest(subscription: ReminderSubscription) {
@@ -320,7 +249,7 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
             :class="['nav-item', { 'nav-item--active': activeSection === section.id }]"
             @click="selectSection(section.id)"
           >
-            <span class="nav-index">0{{ index + 4 }}</span>
+            <span class="nav-index">0{{ index + intelligenceSections.length + 1 }}</span>
             <el-icon><component :is="section.icon" /></el-icon>
             <span class="nav-copy"><b>{{ section.label }}</b><small>{{ section.caption }}</small></span>
             <span class="nav-marker" />
@@ -380,77 +309,10 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
         </div>
       </div>
 
-      <section v-show="activeSection === 'crawler'" class="workspace-section">
-        <div class="section-intro">
-          <div>
-            <span class="section-number">01</span>
-            <h2 class="section-title">Tibo 动态采集策略</h2>
-            <p class="section-copy">设置目标账号、匹配词、抓取节奏和每次读取数量。</p>
-          </div>
-          <div :class="['status-pill', { 'status-pill--paused': !config.crawler.scheduleEnabled }]">
-            <i />{{ config.crawler.scheduleEnabled ? "定时任务在线" : "定时任务已暂停" }}
-          </div>
-        </div>
-
-        <div class="strategy-grid">
-          <div class="panel-surface config-panel">
-            <div class="panel-label"><Setting /><span>基础设置</span></div>
-            <el-form label-position="top">
-              <el-form-item label="监控账号">
-                <el-input v-model="config.crawler.account" size="large" maxlength="50">
-                  <template #prefix><span class="input-at">@</span></template>
-                </el-input>
-                <p class="field-help">填写 X 用户名，不需要输入 @ 或完整链接。</p>
-              </el-form-item>
-
-              <el-form-item label="自动采集">
-                <div class="switch-field">
-                  <div><b>定时任务</b><small>按设置的时间间隔持续检查公开动态</small></div>
-                  <el-switch v-model="config.crawler.scheduleEnabled" />
-                </div>
-              </el-form-item>
-
-              <div class="number-fields">
-                <el-form-item label="抓取频率">
-                  <el-input-number v-model="config.crawler.intervalMinutes" :min="5" :max="10080" :step="5" controls-position="right" />
-                  <p class="field-help">分钟，范围 5 分钟至 7 天</p>
-                </el-form-item>
-                <el-form-item label="每次抓取">
-                  <el-input-number v-model="config.crawler.maxPosts" :min="1" :max="100" controls-position="right" />
-                  <p class="field-help">条，范围 1–100</p>
-                </el-form-item>
-              </div>
-            </el-form>
-          </div>
-
-          <div class="panel-surface keyword-panel">
-            <div class="panel-label"><Document /><span>关键词过滤</span></div>
-            <p class="panel-description">帖子命中任意一个关键词后进入情报判断。英文统一按小写保存。</p>
-            <div class="keyword-input">
-              <el-input v-model="keywordInput" maxlength="40" placeholder="输入关键词" @keyup.enter="addKeyword" />
-              <el-button :icon="Plus" aria-label="添加关键词" @click="addKeyword" />
-            </div>
-            <div class="keyword-cloud">
-              <el-tag
-                v-for="keyword in config.crawler.keywords"
-                :key="keyword"
-                closable
-                disable-transitions
-                @close="removeKeyword(keyword)"
-              >{{ keyword }}</el-tag>
-            </div>
-            <div class="reference-note">
-              <Lock />
-              <p><b>边界与参考项目一致</b><span>抓取间隔 5–10080 分钟；每次 1–100 条。</span></p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section v-show="activeSection === 'tutorials'" class="workspace-section">
         <div class="section-intro">
           <div>
-            <span class="section-number">02</span>
+            <span class="section-number">01</span>
             <h2 class="section-title">AI 教程板块</h2>
             <p class="section-copy">只有已保存的教程会出现在小程序；列表为空时整个板块隐藏。</p>
           </div>
@@ -492,7 +354,7 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
       <section v-show="activeSection === 'community'" class="workspace-section">
         <div class="section-intro">
           <div>
-            <span class="section-number">03</span>
+            <span class="section-number">02</span>
             <h2 class="section-title">交流群入口</h2>
             <p class="section-copy">上传群二维码后，小程序才会展示完整的社群邀请区。</p>
           </div>
@@ -540,7 +402,7 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
       <section v-show="activeSection === 'reminder-settings'" class="workspace-section">
         <div class="section-intro">
           <div>
-            <span class="section-number">04</span>
+            <span class="section-number">03</span>
             <h2 class="section-title">微信订阅提醒</h2>
             <p class="section-copy">凭据安全保存在服务端持久化配置中。启用后无需重启，下一轮监控将自动生效。</p>
           </div>
@@ -572,73 +434,6 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
           </el-form>
         </div>
         <div class="reminder-guide"><Lock /><div><b>密钥不会回传到浏览器</b><span>页面再次打开时 AppSecret 始终为空；不填写即保存不会清除已经配置的密钥。</span></div></div>
-      </section>
-
-      <section v-show="activeSection === 'deployment'" class="workspace-section">
-        <div class="section-intro">
-          <div>
-            <span class="section-number">05</span>
-            <h2 class="section-title">生产环境部署</h2>
-            <p class="section-copy">按服务独立构建与更新，避免无关镜像拉取阻塞发布。</p>
-          </div>
-          <div :class="['deploy-status', `deploy-status--${deployment.status}`]">
-            <i />{{ deploymentLabel }}
-          </div>
-        </div>
-
-        <div class="deployment-grid">
-          <div class="panel-surface deployment-action-panel">
-            <div class="deployment-emblem"><Promotion /></div>
-            <p class="workspace-kicker">RELEASE PIPELINE</p>
-            <h3>选择部署目标</h3>
-            <p>固定执行安全的快进拉取与 Docker Compose 构建流程，不接受页面传入的命令或路径。</p>
-            <ol class="deployment-steps">
-              <li><span>01</span><div><b>同步仓库</b><small>git pull --ff-only</small></div></li>
-              <li><span>02</span><div><b>构建目标镜像</b><small>server 或 admin</small></div></li>
-              <li><span>03</span><div><b>更新并校验目标服务</b><small>docker compose up -d --no-deps</small></div></li>
-            </ol>
-            <div class="deployment-buttons">
-              <el-button
-                type="primary"
-                size="large"
-                :icon="Promotion"
-                :loading="deploying && deployment.target === 'admin'"
-                :disabled="deployment.status === 'running' || deployment.status === 'unavailable'"
-                @click="confirmDeploy('admin')"
-              >{{ deployment.status === "running" && deployment.target === "admin" ? "正在部署管理端" : deployment.status === "unavailable" ? "部署服务未配置" : "部署 Admin" }}</el-button>
-              <el-button
-                size="large"
-                :icon="Promotion"
-                :loading="deploying && deployment.target === 'server'"
-                :disabled="deployment.status === 'running' || deployment.status === 'unavailable'"
-                @click="confirmDeploy('server')"
-              >{{ deployment.status === "running" && deployment.target === "server" ? "正在部署 API" : deployment.status === "unavailable" ? "部署服务未配置" : "部署 Server" }}</el-button>
-            </div>
-          </div>
-
-          <div class="deployment-inspection-column">
-            <div class="deployment-version-panel">
-              <div class="deployment-version-head"><span>RUNNING RELEASES</span><el-button text :icon="Refresh" :loading="deployment.status === 'running'" @click="emit('refreshDeployment')">刷新核对</el-button></div>
-              <div class="deployment-version-list">
-                <div v-for="target in ['admin', 'server'] as const" :key="target" class="deployment-version-row">
-                  <span :class="['deployment-version-service', `deployment-version-service--${target}`]">{{ target === 'admin' ? 'ADMIN' : 'API' }}</span>
-                  <div><small>版本号</small><b>{{ deployedVersion(target) }}</b></div>
-                  <div><small>部署时间</small><b>{{ deployedAt(target) }}</b></div>
-                </div>
-              </div>
-            </div>
-            <div class="panel-surface deployment-log-panel">
-            <div class="deployment-log-head">
-              <div>
-                <component :is="deployment.status === 'failed' ? Warning : CircleCheck" />
-                <span><b>{{ deploymentTargetLabel }}{{ deploymentLabel }}</b><small>{{ deployment.finishedAt ? formatUpdatedAt(deployment.finishedAt) : "等待执行" }}</small></span>
-              </div>
-              <el-button text :icon="Refresh" :loading="deployment.status === 'running'" @click="emit('refreshDeployment')">刷新</el-button>
-            </div>
-            <pre class="deployment-log">{{ deployment.log || "$ 等待部署任务…" }}</pre>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section v-show="activeSection === 'reminders'" class="workspace-section">
@@ -735,7 +530,7 @@ function reminderActionDisabled(subscription: ReminderSubscription) {
         </div>
       </section>
 
-      <footer v-if="!['deployment', 'reminders', 'logs'].includes(activeSection)" class="save-bar">
+      <footer v-if="!isOperations" class="save-bar">
         <div><span class="save-bar-beacon" /><p><b>配置变更尚需保存</b><small>保存后公开接口与小程序同步生效</small></p></div>
         <el-button type="primary" size="large" :loading="saving" @click="submit">{{ saving ? "正在保存" : "保存全部配置" }}</el-button>
       </footer>

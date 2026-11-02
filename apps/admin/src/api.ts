@@ -1,7 +1,6 @@
 import type {
   AdminSession,
   CodexWatchConfig,
-  DeploymentStatus,
   ReminderSubscription,
   ReminderTestResult,
   RequestLogPage,
@@ -55,19 +54,6 @@ export function saveConfig(token: string, config: CodexWatchConfig) {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(config),
-  });
-}
-
-export function getDeploymentStatus(token: string) {
-  return request<DeploymentStatus>("/api/v1/admin/deployment/status", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export function startDeployment(token: string, target: "server" | "admin") {
-  return request<DeploymentStatus>(`/api/v1/admin/deployment/${target}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
   });
 }
 
