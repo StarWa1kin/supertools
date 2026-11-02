@@ -2,14 +2,14 @@
 
 ## 本地接入 media-parser
 
+服务端不再内置平台解析逻辑，所有分享链接都转交独立的 media-parser 服务解析。
 小程序继续使用本项目的 `/api/v1/video-parser/resolve` 和 `/media`。
-FastAPI 将上游结果转换为既有字段，并继续对媒体域名校验、签名和中转。
-不会将 API Key 下发给小程序，也不会在上游失败后自动切回原生解析器。
+FastAPI 将上游结果转换为既有字段，并继续对媒体地址校验、签名和中转。
+不会将 API Key 下发给小程序；上游失败时直接返回错误。
 
 在 `apps/server/.env` 中设置：
 
 ```dotenv
-VIDEO_PARSER_BACKEND=media_parser
 MEDIA_PARSER_BASE_URL=http://127.0.0.1:8051
 MEDIA_PARSER_API_KEY=
 MEDIA_PARSER_TIMEOUT_SECONDS=95
@@ -32,9 +32,9 @@ sh scripts/dev-media-parser.sh
 不影响生产构建。真机调试需换成电脑可访问的局域网地址，并配置相应调试域名。
 解析请求单独等待 120 秒，其余 API 仍默认 30 秒。
 
-`media_parser` 模式不在本项目维护分享平台白名单，由上游识别平台并判断是否支持。
+本项目不维护分享平台白名单，由上游识别平台并判断是否支持。
 抖音、快手、小红书继续返回 `douyin`、`kuaishou`、`xiaohongshu`；其他平台保留上游名称，
-前端和本地历史记录接受这些平台字段。原生 `native` 模式仍仅支持原有三个平台。
+前端和本地历史记录接受这些平台字段。
 此配置不保证上游一定支持视频号等特定平台，平台规则及内容可访问性仍由上游决定。
 
 视频列表去重后转换为视频资源；没有视频时使用图片列表，
@@ -45,12 +45,11 @@ sh scripts/dev-media-parser.sh
 
 分享链接仍校验 HTTP/HTTPS、凭据、端口及私网 IP；启用 `VIDEO_PARSER_RESOLVE_DNS` 时，
 转交上游前还会检查入口域名的公网 DNS。上游自身也需逐跳校验其内部发起的请求。
-只有上游返回并通过地址检查的媒体才能取得本项目签名；`media_parser` 模式不再使用旧的
-三个平台 CDN 白名单限制这些媒体，封面和头像同理。中转仍验证签名、地址及重定向，
-按配置检查公网 DNS，并限制类型、大小及超时。`native` 模式保留原 CDN 白名单。
+只有上游返回并通过地址检查的媒体才能取得本项目签名，不再使用 CDN 域名白名单，
+封面和头像同理。中转仍验证签名、地址及重定向，按配置检查公网 DNS，并限制类型、大小及超时。
 
-切回原生解析器：将 `VIDEO_PARSER_BACKEND` 设为 `native` 并重启 FastAPI。
-生产默认值仍为 `native`；Docker 中接入独立解析容器时需显式设置服务地址，
+Docker 部署时需在 `.env.production` 中显式设置 `MEDIA_PARSER_BASE_URL`
+（如 `http://host.docker.internal:8051` 或解析容器服务名），
 不要使用指向 API 容器自身的 `127.0.0.1`。
 
 ## 解析公开内容
@@ -63,7 +62,7 @@ sh scripts/dev-media-parser.sh
 }
 ```
 
-接口在 `native` 模式支持抖音、快手和小红书公开分享链接，`media_parser` 模式支持范围由上游决定。
+支持的平台范围由 media-parser 决定。
 响应中的 `mediaType` 为 `video` 或 `images`，每个 `assets` 项包含原始平台地址、同源预览路径和下载路径：
 
 ```json
@@ -98,17 +97,17 @@ sh scripts/dev-media-parser.sh
 - `token` 只能由解析接口签发，默认 15 分钟过期，篡改后无效。
 - `download=true` 时返回下载响应；默认以内联方式响应，支持标准单段 Range 请求。
 - 服务端校验媒体签名与地址，按配置逐跳检查公网 DNS，不接受调用方提供任意未签名 URL。
-- 原生模式的初始媒体地址还需匹配 CDN 白名单；上游模式接收解析服务返回并签名的媒体地址。
+- 只接收解析服务返回并签名的媒体地址。
 - 媒体若跳转到动态 CDN，服务端验证 HTTPS、地址及按配置检查公网 DNS 后继续中转，不将原始跳转暴露给客户端。
 - 视频默认上限 200 MB，图片默认上限 20 MB；流式响应结束后不会保留文件。
 
 ## 部署配置
 
 - 复制 `apps/server/.env.example` 并设置随机的 `VIDEO_MEDIA_SIGNING_SECRET`。生产环境禁止使用开发默认值。
-- `VIDEO_MEDIA_ALLOWED_HOSTS` 是原生模式的媒体 CDN 域名后缀白名单；`media_parser` 模式由上游提供媒体地址，仍执行公网地址与签名等校验。
+- 设置 `MEDIA_PARSER_BASE_URL` 与 `MEDIA_PARSER_API_KEY`，指向生产可访问的 media-parser 服务。
 - `APP_CORS_ORIGINS` 只填写实际 H5 来源，不使用通配符。
 - 微信公众平台需将自有 HTTPS API 域名加入 request、downloadFile 和媒体访问域名。小程序不需要直接放行平台动态 CDN。
-- 解析器只使用匿名公开页面，不配置或转发用户 Cookie。
+- 上游解析器只使用匿名公开页面，不配置或转发用户 Cookie。
 
 ## 验证
 
@@ -123,4 +122,4 @@ pnpm --dir apps/miniapp build:h5
 pnpm --dir apps/miniapp build:mp-weixin
 ```
 
-平台测试使用 `apps/server/tests/fixtures/` 内的脱敏快照，不应在自动测试中访问实时平台。
+解析测试通过 mock 的 media-parser 响应进行，不应在自动测试中访问实时平台或上游服务。

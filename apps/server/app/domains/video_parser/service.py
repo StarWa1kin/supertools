@@ -3,112 +3,47 @@ import logging
 from functools import lru_cache
 from urllib.parse import urlsplit
 
-from app.clients.safe_http import (
-    SafeHttpClient,
-    ensure_public_dns,
-    host_matches,
-    normalize_public_url,
-)
+from app.clients.safe_http import ensure_public_dns, normalize_public_url
 from app.core.config import Settings, get_settings
-from app.domains.video_parser.adapters import DouyinAdapter, KuaishouAdapter, XiaohongshuAdapter
-from app.domains.video_parser.adapters.base import ParsedMedia, VideoPlatformAdapter
-from app.domains.video_parser.errors import VideoParserError, invalid_link, parse_error
+from app.domains.video_parser.errors import VideoParserError, parse_error
 from app.domains.video_parser.media import MediaProxy, MediaTokenService
-from app.domains.video_parser.schemas import (
-    VideoAsset,
-    VideoAuthor,
-    VideoPlatform,
-    VideoResolveResult,
-)
-from app.domains.video_parser.upstream import MediaParserClient
+from app.domains.video_parser.schemas import VideoAsset, VideoAuthor, VideoResolveResult
+from app.domains.video_parser.upstream import MediaParserClient, ParsedMedia
 
 logger = logging.getLogger(__name__)
 
-PLATFORM_HOSTS: dict[VideoPlatform, tuple[str, ...]] = {
-    "douyin": ("douyin.com", "iesdouyin.com"),
-    "kuaishou": ("kuaishou.com", "kuaishoup.com", "gifshow.com", "chenzhongtech.com"),
-    "xiaohongshu": ("xiaohongshu.com", "xhslink.com", "xhslink.cn"),
-}
-
-
-def detect_platform(url: str) -> VideoPlatform | None:
-    try:
-        hostname = (urlsplit(url.strip()).hostname or "").lower().rstrip(".")
-    except ValueError:
-        return None
-    for platform, allowed_hosts in PLATFORM_HOSTS.items():
-        if any(host_matches(hostname, allowed) for allowed in allowed_hosts):
-            return platform
-    return None
-
 
 class VideoParserService:
-    def __init__(
-        self,
-        *,
-        settings: Settings | None = None,
-        http_client: SafeHttpClient | None = None,
-    ) -> None:
+    """Delegate parsing to media-parser, then sign and proxy the media it returns."""
+
+    def __init__(self, *, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         if (
             self.settings.environment == "production"
             and self.settings.video_media_signing_secret == "dev-only-change-me"
         ):
             raise RuntimeError("VIDEO_MEDIA_SIGNING_SECRET must be configured in production")
-        self.http_client = http_client or SafeHttpClient(
-            timeout_seconds=self.settings.video_parser_timeout_seconds,
-            max_redirects=self.settings.video_parser_max_redirects,
-            max_response_bytes=self.settings.video_parser_max_response_bytes,
-            concurrency=self.settings.video_parser_concurrency,
-            resolve_dns=self.settings.video_parser_resolve_dns,
-        )
         self.token_service = MediaTokenService(
             self.settings.video_media_signing_secret,
             self.settings.video_media_token_ttl_seconds,
         )
         self.media_proxy = MediaProxy(self.settings, self.token_service)
-        self.upstream = (
-            MediaParserClient(self.settings)
-            if self.settings.video_parser_backend == "media_parser"
-            else None
-        )
-        self.adapters: dict[VideoPlatform, VideoPlatformAdapter] = {
-            "douyin": DouyinAdapter(self.http_client),
-            "kuaishou": KuaishouAdapter(self.http_client),
-            "xiaohongshu": XiaohongshuAdapter(self.http_client),
-        }
+        self.upstream = MediaParserClient(self.settings)
 
     async def resolve(self, url: str) -> VideoResolveResult:
-        platform = detect_platform(url)
-        if self.upstream is None and platform is None:
-            raise invalid_link("目前仅支持抖音、快手和小红书公开分享链接")
-        normalized_url = normalize_public_url(
-            url, None if self.upstream is not None else PLATFORM_HOSTS[platform]
-        )
-        if self.upstream is not None and self.settings.video_parser_resolve_dns:
+        normalized_url = normalize_public_url(url)
+        if self.settings.video_parser_resolve_dns:
             await ensure_public_dns(urlsplit(normalized_url).hostname or "")
         url_hash = hashlib.sha256(normalized_url.encode()).hexdigest()[:12]
         try:
-            parsed = (
-                await self.upstream.resolve(normalized_url)
-                if self.upstream is not None
-                else await self.adapters[platform].resolve(normalized_url)
-            )
-            return self._to_result(parsed)
+            return self._to_result(await self.upstream.resolve(normalized_url))
         except VideoParserError as exc:
-            logger.warning(
-                "video parse failed platform=%s code=%s url_hash=%s",
-                platform or "upstream",
-                exc.code,
-                url_hash,
-            )
+            logger.warning("video parse failed code=%s url_hash=%s", exc.code, url_hash)
             raise
 
     async def close(self) -> None:
-        await self.http_client.close()
         await self.media_proxy.close()
-        if self.upstream is not None:
-            await self.upstream.close()
+        await self.upstream.close()
 
     def _to_result(self, parsed: ParsedMedia) -> VideoResolveResult:
         if not parsed.assets:
@@ -117,7 +52,7 @@ class VideoParserService:
         assets: list[VideoAsset] = []
         for index, asset in enumerate(parsed.assets, start=1):
             try:
-                source_url = normalize_public_url(asset.url, self._media_allowed_hosts)
+                source_url = normalize_public_url(asset.url)
             except VideoParserError as exc:
                 raise VideoParserError(
                     "unsupported_media_host",
@@ -158,16 +93,11 @@ class VideoParserService:
         if not source_url:
             return None
         try:
-            normalized = normalize_public_url(source_url, self._media_allowed_hosts)
+            normalized = normalize_public_url(source_url)
         except VideoParserError:
             return None
         token = self.token_service.sign(url=normalized, kind="image", filename=name)
         return f"/api/v1/video-parser/media?token={token}"
-
-    @property
-    def _media_allowed_hosts(self) -> list[str] | None:
-        # Only the configured parser can supply URLs that receive signed tokens.
-        return None if self.upstream is not None else self.settings.video_media_allowed_hosts
 
 
 @lru_cache

@@ -7,7 +7,7 @@
 ## 首期工具
 
 1. **Codex 额度情报监控**：定时获取指定 X（Twitter）账号（初始目标为 Tibo）的公开帖子，按 Codex、quota、limit、reset 等可配置关键词筛选，判断是否出现额度调整或重置信息。保存原文链接、发布时间、抓取时间和匹配原因，并通过帖子 ID 去重。账号、关键词和轮询频率必须来自配置，不得硬编码；页面需明确区分“官方确认”“第三方消息”和“程序推测”。
-2. **视频链接解析**：接收抖音、快手等平台的公开分享链接，识别平台、解析标题/封面/作者及可用的视频地址，并允许用户下载。每个平台使用独立 adapter，单个平台规则变化不得影响其他平台。仅处理用户有权下载的公开内容，不绕过登录、付费、DRM 或访问控制；页面应展示版权与平台条款提示。
+2. **视频链接解析**：接收抖音、快手等平台的公开分享链接，识别平台、解析标题/封面/作者及可用的视频地址，并允许用户下载。解析统一交给独立的 media-parser 服务，服务端不内置平台解析逻辑。仅处理用户有权下载的公开内容，不绕过登录、付费、DRM 或访问控制；页面应展示版权与平台条款提示。
 
 ## 目录结构
 
@@ -23,7 +23,7 @@
 
 业务逻辑不得直接堆放在页面或路由处理函数中；前端提取到 composable，后端下沉到 service。
 
-首期页面建议使用 `pages/codex-watch/` 和 `pages/video-parser/`。后端领域模块使用 `app/domains/codex_watch/` 与 `app/domains/video_parser/`；视频平台适配器放在 `video_parser/adapters/`，共享 HTTP 客户端放在 `app/clients/`。
+首期页面建议使用 `pages/codex-watch/` 和 `pages/video-parser/`。后端领域模块使用 `app/domains/codex_watch/` 与 `app/domains/video_parser/`；media-parser 上游客户端放在 `video_parser/upstream.py`，共享 URL/DNS 安全校验放在 `app/clients/`。
 
 ## 前端信息架构
 

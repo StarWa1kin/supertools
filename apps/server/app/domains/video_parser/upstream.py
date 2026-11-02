@@ -2,20 +2,38 @@
 
 import asyncio
 import json
+from dataclasses import dataclass, field
 
 import httpx
 from pydantic import BaseModel, Field
 
 from app.core.config import Settings
-from app.domains.video_parser.adapters.base import ParsedAsset, ParsedMedia
 from app.domains.video_parser.errors import VideoParserError, parse_error, upstream_error
-from app.domains.video_parser.schemas import VideoPlatform
+from app.domains.video_parser.schemas import MediaKind, VideoPlatform
 
 PLATFORM_IDS: dict[str, str] = {
     "抖音": "douyin",
     "快手": "kuaishou",
     "小红书": "xiaohongshu",
 }
+
+
+@dataclass(slots=True)
+class ParsedAsset:
+    kind: MediaKind
+    url: str
+
+
+@dataclass(slots=True)
+class ParsedMedia:
+    platform: VideoPlatform
+    canonical_url: str
+    title: str = ""
+    author_name: str = ""
+    author_avatar_url: str | None = None
+    cover_url: str | None = None
+    duration_ms: int | None = None
+    assets: list[ParsedAsset] = field(default_factory=list)
 
 
 class UpstreamAuthor(BaseModel):

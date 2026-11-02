@@ -37,9 +37,9 @@ Codex 情报管理端默认位于 `http://127.0.0.1:5174`，开发账号为 `adm
 
 视频解析接口及生产配置说明见 [`docs/video-parser.md`](docs/video-parser.md)。正式微信小程序需要将自有 HTTPS API 域名加入 request、downloadFile 和媒体访问域名配置；生产环境必须替换 `VIDEO_MEDIA_SIGNING_SECRET`。
 
-视频解析也支持通过 `VIDEO_PARSER_BACKEND=media_parser` 接入独立解析服务，
-小程序接口保持不变。同级目录的本地服务可用 `sh scripts/dev-media-parser.sh` 启动，
-配置、字段适配和切回原生解析器的说明见 [`docs/video-parser.md`](docs/video-parser.md#本地接入-media-parser)。
+视频解析统一由独立的 media-parser 服务完成（通过 `MEDIA_PARSER_BASE_URL` 配置），
+服务端不再内置平台解析逻辑。同级目录的本地服务可用 `sh scripts/dev-media-parser.sh` 启动，
+配置与字段适配说明见 [`docs/video-parser.md`](docs/video-parser.md#本地接入-media-parser)。
 
 ## Docker 服务器部署
 

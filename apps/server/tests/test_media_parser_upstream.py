@@ -18,7 +18,6 @@ from app.domains.video_parser.service import VideoParserService
 def parser_settings(**overrides: Any) -> Settings:
     return Settings(
         _env_file=None,
-        VIDEO_PARSER_BACKEND="media_parser",
         MEDIA_PARSER_API_KEY="fixture-key",
         VIDEO_MEDIA_SIGNING_SECRET="fixture-signing-secret",
         **{"VIDEO_PARSER_RESOLVE_DNS": False, **overrides},
@@ -51,7 +50,6 @@ async def mocked_service(
         return httpx.Response(status, json=body, request=request)
 
     service = VideoParserService(settings=settings or parser_settings())
-    assert service.upstream is not None
     await service.upstream._client.aclose()
     service.upstream._client = httpx.AsyncClient(
         transport=httpx.MockTransport(handler),
@@ -106,7 +104,6 @@ def test_configured_key_is_sent_to_upstream() -> None:
     async def scenario() -> None:
         service = VideoParserService(settings=parser_settings())
         try:
-            assert service.upstream is not None
             assert service.upstream._client.headers["authorization"] == "Bearer fixture-key"
         finally:
             await service.close()
@@ -255,25 +252,6 @@ def test_media_redirect_to_private_host_is_blocked() -> None:
 
     asyncio.run(scenario())
     assert seen == ["new-cdn.example"]
-
-
-def test_native_mode_still_requires_supported_platform_and_media_host() -> None:
-    async def scenario() -> None:
-        settings = Settings(_env_file=None, VIDEO_PARSER_BACKEND="native")
-        service = VideoParserService(settings=settings)
-        try:
-            with pytest.raises(VideoParserError) as error:
-                await service.resolve("https://weixin.qq.com/sph/example")
-            assert error.value.code == "invalid_link"
-            token = service.token_service.sign(
-                url="https://new-cdn.example/video.mp4", kind="video", filename="media"
-            )
-            with pytest.raises(VideoParserError):
-                await service.media_proxy.response(token, download=False, range_header=None)
-        finally:
-            await service.close()
-
-    asyncio.run(scenario())
 
 
 def test_public_ipv6_url_keeps_brackets() -> None:

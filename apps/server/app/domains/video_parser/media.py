@@ -124,12 +124,7 @@ class MediaProxy:
         )
 
     async def _open(self, url: str, *, range_header: str | None) -> httpx.Response:
-        allowed_hosts = (
-            None
-            if self.settings.video_parser_backend == "media_parser"
-            else self.settings.video_media_allowed_hosts
-        )
-        current = normalize_public_url(url, allowed_hosts)
+        current = normalize_public_url(url)
         headers = {"Range": range_header} if range_header else None
         for redirect_count in range(self.settings.video_parser_max_redirects + 1):
             if self.settings.video_parser_resolve_dns:
@@ -154,7 +149,7 @@ class MediaProxy:
                 # Media providers commonly redirect to short-lived, dynamically named
                 # CDN hosts. Keep following those redirects on the server so WeChat only
                 # needs our API domain in its request/downloadFile/video allowlists.
-                current = normalize_public_url(target, [target_host])
+                current = normalize_public_url(target)
                 continue
             if response.status_code not in {200, 206}:
                 await response.aclose()
