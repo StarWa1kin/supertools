@@ -150,3 +150,42 @@ def test_forecast_calculates_timeline_statistics() -> None:
     assert forecast.all_time_median_days == 4.5
     assert forecast.recent_30d_median_days == 4.5
     assert forecast.longest_wait_days == 6.0
+
+
+def test_confirmed_announcement_is_official_before_it_reaches_the_archive() -> None:
+    # Real shape from codex-reset.com: confirmed resets stay out of the archive
+    # for a week or more, so they must not wait for it to count as official.
+    posts = parse_timeline(
+        {
+            "events": [
+                {
+                    "id": "44",
+                    "summary": "Day 21/ But today is a reset.",
+                    "url": "https://x.com/thsottiaux/status/44",
+                    "announced_at": "2026-10-26T06:08:46Z",
+                    "type": "reset",
+                    "source": "operator-observed",
+                    "confidence": "medium",
+                    "confirmed": True,
+                    "announcement_state": "announced",
+                    "observation_result": "reset_observed",
+                    "reset_verification_status": "pending",
+                },
+                {
+                    "id": "45",
+                    "summary": "Lands tomorrow before 10am PST.",
+                    "url": "https://x.com/thsottiaux/status/45",
+                    "announced_at": "2026-10-22T06:55:54Z",
+                    "type": "reset",
+                    "source": "live",
+                    "confidence": "medium",
+                    "confirmed": False,
+                    "announcement_state": "none",
+                    "reset_verification_status": "pending",
+                },
+            ]
+        },
+        ["reset"],
+    )
+
+    assert [post.confidence for post in posts] == ["official", "third_party"]

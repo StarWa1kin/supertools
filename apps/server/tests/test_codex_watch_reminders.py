@@ -3,7 +3,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
+import pytest
 
+from app.domains.codex_watch import reminders
 from app.domains.codex_watch.reminders import ReminderStore, WechatClient, latest_confirmed_reset
 from app.domains.codex_watch.schemas import (
     CodexWatchConfig,
@@ -203,3 +205,104 @@ def test_wechat_client_exchanges_code_and_sends_message(tmp_path: Path) -> None:
         "/cgi-bin/token",
         "/cgi-bin/message/subscribe/send",
     ]
+
+
+def test_resubscribing_keeps_the_time_of_unused_authorizations(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        store = ReminderStore(tmp_path)
+        first = await store.subscribe("openid-1", "template-1")
+        event = make_post(published_at=datetime.now(UTC))
+        # Tapping subscribe again after the reset was announced must not hide it.
+        second = await store.subscribe("openid-1", "template-1")
+
+        assert second.subscribed_at == first.subscribed_at
+        assert second.remaining_deliveries == 2
+        assert len(await store.active_for(event)) == 1
+
+    asyncio.run(scenario())
+
+
+def test_resubscribing_after_all_authorizations_are_used_restarts_the_clock(
+    tmp_path: Path,
+) -> None:
+    async def scenario() -> None:
+        store = ReminderStore(tmp_path)
+        first = await store.subscribe("openid-1", "template-1")
+        await store.mark_sent("openid-1", "template-1", "reset-1")
+        second = await store.subscribe("openid-1", "template-1")
+
+        assert second.subscribed_at > first.subscribed_at
+
+    asyncio.run(scenario())
+
+
+def test_latest_confirmed_reset_ignores_stale_events() -> None:
+    now = datetime.now(UTC)
+
+    assert latest_confirmed_reset([make_post(published_at=now - timedelta(days=5))], now) is None
+    fresh = latest_confirmed_reset([make_post(published_at=now - timedelta(hours=2))], now)
+    assert fresh is not None
+
+
+def configured_store(tmp_path: Path) -> CodexWatchConfigStore:
+    return CodexWatchConfigStore(
+        tmp_path,
+        CodexWatchConfig(
+            crawler=CrawlerConfig(account="tibo", keywords=["reset"]),
+            reminder=ReminderConfig(
+                enabled=True,
+                app_id="app-id",
+                app_secret="app-secret",
+                template_id="template-1",
+            ),
+        ),
+    )
+
+
+def test_dispatch_drops_subscriptions_wechat_reports_as_unauthorized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/cgi-bin/token":
+            return httpx.Response(200, json={"access_token": "token-1", "expires_in": 7200})
+        return httpx.Response(200, json={"errcode": 43101, "errmsg": "user refuse to accept"})
+
+    reminder_store = ReminderStore(tmp_path)
+    monkeypatch.setattr(reminders, "get_codex_watch_store", lambda: configured_store(tmp_path))
+    monkeypatch.setattr(reminders, "get_reminder_store", lambda: reminder_store)
+    monkeypatch.setattr(
+        reminders,
+        "WechatClient",
+        lambda settings: WechatClient(settings, transport=httpx.MockTransport(handler)),
+    )
+
+    async def scenario() -> None:
+        await reminder_store.subscribe("openid-1", "template-1")
+        sent = await reminders.dispatch_confirmed_reset(make_post())
+
+        assert sent == 0
+        assert (await reminder_store.list_subscriptions())[0].remaining_deliveries == 0
+
+    asyncio.run(scenario())
+
+
+def test_monitor_loop_survives_unexpected_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    # An OSError (e.g. an unreadable config) used to end the task for good.
+    sleeps = 0
+
+    async def fake_sleep(_seconds: float) -> None:
+        nonlocal sleeps
+        sleeps += 1
+        if sleeps >= 2:
+            raise asyncio.CancelledError
+
+    class BrokenStore:
+        async def load(self) -> None:
+            raise OSError("config temporarily unreadable")
+
+    monkeypatch.setattr(reminders, "get_codex_watch_store", lambda: BrokenStore())
+    monkeypatch.setattr(reminders.asyncio, "sleep", fake_sleep)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(reminders._monitor_loop())
+    assert sleeps == 2

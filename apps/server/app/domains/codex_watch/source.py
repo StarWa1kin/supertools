@@ -16,6 +16,11 @@ def _confidence(event: dict[str, Any]) -> str:
         return "inferred"
     if event.get("source") == "archive" and event.get("confidence") == "high":
         return "official"
+    # The archive is curated by hand and often lags a week or more. An event the
+    # source marks as confirmed and announced by the official account is already
+    # an official confirmation; waiting for the archive makes reminders useless.
+    if event.get("confirmed") is True and event.get("announcement_state") == "announced":
+        return "official"
     return "third_party"
 
 

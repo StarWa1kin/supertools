@@ -1,8 +1,9 @@
 import asyncio
 import json
+import logging
 import os
 from contextlib import suppress
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,14 @@ from app.domains.codex_watch.source import CodexResetSource
 from app.domains.codex_watch.store import get_codex_watch_store
 
 WECHAT_API = "https://api.weixin.qq.com"
+# Reminder times are shown to users in mainland China; the container runs in UTC.
+DISPLAY_TIMEZONE = timezone(timedelta(hours=8))
+# A reset announced longer ago than this is no longer worth a push notification.
+MAX_EVENT_AGE = timedelta(hours=24)
+# WeChat: the user has no remaining authorization for this template.
+WECHAT_ERR_NO_AUTHORIZATION = 43101
+
+logger = logging.getLogger(__name__)
 
 
 class WechatApiError(RuntimeError):
@@ -55,7 +64,10 @@ class ReminderStore:
                 None,
             )
             if existing:
-                existing.subscribed_at = datetime.now(UTC)
+                # Keep the original time while earlier authorizations are unused;
+                # otherwise re-subscribing hides resets announced in the meantime.
+                if existing.remaining_deliveries == 0:
+                    existing.subscribed_at = datetime.now(UTC)
                 existing.remaining_deliveries = min(existing.remaining_deliveries + 1, 100)
             else:
                 existing = ReminderSubscription(
@@ -99,6 +111,15 @@ class ReminderStore:
                 if item.openid == openid and item.template_id == template_id:
                     item.remaining_deliveries = max(0, item.remaining_deliveries - 1)
                     item.last_sent_event_id = event_id
+                    break
+            await asyncio.to_thread(self._write, state)
+
+    async def mark_unauthorized(self, openid: str, template_id: str) -> None:
+        async with self._lock:
+            state = await asyncio.to_thread(self._read)
+            for item in state.subscriptions:
+                if item.openid == openid and item.template_id == template_id:
+                    item.remaining_deliveries = 0
                     break
             await asyncio.to_thread(self._write, state)
 
@@ -174,7 +195,9 @@ class WechatClient:
                         else "Codex 全局额度已重置"
                     },
                     settings.time_key: {
-                        "value": event.published_at.astimezone().strftime("%Y-%m-%d %H:%M")
+                        "value": event.published_at.astimezone(DISPLAY_TIMEZONE).strftime(
+                            "%Y-%m-%d %H:%M"
+                        )
                     },
                     settings.remark_key: {
                         "value": "这是管理员发起的测试消息" if is_test else "打开小程序查看适用范围"
@@ -225,10 +248,7 @@ class WechatClient:
 
 def reminder_is_configured(settings: ReminderConfig) -> bool:
     return bool(
-        settings.enabled
-        and settings.app_id
-        and settings.app_secret
-        and settings.template_id
+        settings.enabled and settings.app_id and settings.app_secret and settings.template_id
     )
 
 
@@ -247,10 +267,27 @@ async def dispatch_confirmed_reset(event: WatchPost) -> int:
     for subscription in await store.active_for(event):
         try:
             await client.send_reset(subscription, event)
-        except (httpx.HTTPError, WechatApiError):
+        except WechatApiError as exc:
+            logger.warning(
+                "Codex reset reminder rejected subscription=%s errcode=%s error=%s",
+                subscription.id,
+                exc.errcode,
+                str(exc),
+            )
+            if exc.errcode == WECHAT_ERR_NO_AUTHORIZATION:
+                await store.mark_unauthorized(subscription.openid, subscription.template_id)
+            continue
+        except httpx.HTTPError as exc:
+            logger.warning(
+                "Codex reset reminder request failed subscription=%s error_type=%s",
+                subscription.id,
+                type(exc).__name__,
+            )
             continue
         await store.mark_sent(subscription.openid, subscription.template_id, event.id)
         sent += 1
+    if sent:
+        logger.warning("Codex reset reminders sent event=%s count=%d", event.id, sent)
     return sent
 
 
@@ -282,7 +319,8 @@ async def dispatch_test_reset(subscription_id: str) -> ReminderSubscription | No
     return await store.get_by_id(subscription_id)
 
 
-def latest_confirmed_reset(posts: list[WatchPost]) -> WatchPost | None:
+def latest_confirmed_reset(posts: list[WatchPost], now: datetime | None = None) -> WatchPost | None:
+    current = now or datetime.now(UTC)
     candidates = [
         post
         for post in posts
@@ -290,8 +328,19 @@ def latest_confirmed_reset(posts: list[WatchPost]) -> WatchPost | None:
         and post.event_type in {"reset", "promo"}
         and not post.preview
         and post.verification_status != "rejected"
+        and current - post.published_at <= MAX_EVENT_AGE
     ]
     return max(candidates, key=lambda post: post.published_at, default=None)
+
+
+async def _check_and_dispatch(source: CodexResetSource) -> None:
+    config = await get_codex_watch_store().load()
+    if not (config.crawler.schedule_enabled and reminder_is_configured(config.reminder)):
+        return
+    posts, _, _ = await source.fetch(config.crawler.keywords)
+    event = latest_confirmed_reset(posts)
+    if event:
+        await dispatch_confirmed_reset(event)
 
 
 async def _monitor_loop() -> None:
@@ -300,17 +349,18 @@ async def _monitor_loop() -> None:
         settings.codex_watch_source_url,
         settings.codex_watch_source_timeout_seconds,
     )
+    interval_minutes = 30
     while True:
-        config = await get_codex_watch_store().load()
-        if config.crawler.schedule_enabled and reminder_is_configured(config.reminder):
-            try:
-                posts, _, _ = await source.fetch(config.crawler.keywords)
-                event = latest_confirmed_reset(posts)
-                if event:
-                    await dispatch_confirmed_reset(event)
-            except (httpx.HTTPError, ValueError, KeyError, TypeError):
-                pass
-        await asyncio.sleep(max(60, config.crawler.interval_minutes * 60))
+        # Any failure here must not end the task, or reminders stop silently
+        # until the next restart.
+        try:
+            interval_minutes = (await get_codex_watch_store().load()).crawler.interval_minutes
+            await _check_and_dispatch(source)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            logger.warning("Codex reset check failed error_type=%s", type(exc).__name__)
+        except Exception:
+            logger.exception("Codex reset reminder check crashed")
+        await asyncio.sleep(max(60, interval_minutes * 60))
 
 
 _monitor_task: asyncio.Task[None] | None = None
