@@ -48,8 +48,9 @@ sh scripts/dev-media-parser.sh
 只有上游返回并通过地址检查的媒体才能取得本项目签名，不再使用 CDN 域名白名单，
 封面和头像同理。中转仍验证签名、地址及重定向，按配置检查公网 DNS，并限制类型、大小及超时。
 
-Docker 部署时需在 `.env.production` 中显式设置 `MEDIA_PARSER_BASE_URL`
-（如 `http://host.docker.internal:8051` 或解析容器服务名），
+Docker 部署时，`docker-compose.yml` 会让 API 容器加入 media-parse 的 docker 网络
+（默认 `media-parse_default`，可用 `MEDIA_PARSE_NETWORK` 修改），因此需先部署 media-parse。
+在 `.env.production` 中设置 `MEDIA_PARSER_BASE_URL=http://media-parse:8051` 和 `MEDIA_PARSER_API_KEY`，
 不要使用指向 API 容器自身的 `127.0.0.1`。
 
 ## 解析公开内容

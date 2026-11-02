@@ -15,6 +15,11 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - supertools-data:/var/lib/supertools
+    # Joins the separately deployed media-parse stack so MEDIA_PARSER_BASE_URL
+    # can use http://media-parse:8051 without exposing the parser on the host.
+    networks:
+      - default
+      - media-parse
     ports:
       - "${API_BIND_ADDRESS:-127.0.0.1}:${API_HTTP_PORT:-8000}:8000"
     depends_on:
@@ -78,3 +83,8 @@ services:
 volumes:
   supertools-data:
     name: supertools-data
+
+networks:
+  media-parse:
+    external: true
+    name: ${MEDIA_PARSE_NETWORK:-media-parse_default}
