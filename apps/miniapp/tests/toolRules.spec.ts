@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   detectVideoPlatform,
   extractShareUrl,
-  matchCodexKeywords,
 } from "../src/utils/toolRules";
 
 describe("detectVideoPlatform", () => {
@@ -43,12 +42,5 @@ describe("extractShareUrl", () => {
 
   it("returns undefined when no URL is present", () => {
     expect(extractShareUrl("只有普通文字")).toBeUndefined();
-  });
-});
-
-describe("matchCodexKeywords", () => {
-  it("matches keywords without case sensitivity", () => {
-    expect(matchCodexKeywords("Codex quota RESET", ["quota", "reset", "limit"]))
-      .toEqual(["quota", "reset"]);
   });
 });

@@ -40,8 +40,3 @@ export function detectVideoPlatform(value: string): VideoPlatform | undefined {
     ),
   );
 }
-
-export function matchCodexKeywords(text: string, keywords: string[]) {
-  const normalized = text.toLocaleLowerCase();
-  return keywords.filter((keyword) => normalized.includes(keyword.toLocaleLowerCase()));
-}

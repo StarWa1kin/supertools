@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import hmac
 import json
@@ -12,16 +11,9 @@ from starlette.responses import Response, StreamingResponse
 
 from app.clients.safe_http import MOBILE_USER_AGENT, ensure_public_dns, normalize_public_url
 from app.core.config import Settings
+from app.core.encoding import b64url_decode, b64url_encode
 from app.domains.video_parser.errors import VideoParserError, upstream_error
 from app.domains.video_parser.schemas import MediaKind
-
-
-def _encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
-
-
-def _decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,8 +40,8 @@ class MediaTokenService:
             ensure_ascii=True,
             separators=(",", ":"),
         ).encode("utf-8")
-        encoded = _encode(payload)
-        signature = _encode(
+        encoded = b64url_encode(payload)
+        signature = b64url_encode(
             hmac.new(self._secret, encoded.encode("ascii"), hashlib.sha256).digest()
         )
         return f"{encoded}.{signature}"
@@ -57,12 +49,12 @@ class MediaTokenService:
     def verify(self, token: str) -> MediaTokenPayload:
         try:
             encoded, supplied_signature = token.split(".", 1)
-            expected_signature = _encode(
+            expected_signature = b64url_encode(
                 hmac.new(self._secret, encoded.encode("ascii"), hashlib.sha256).digest()
             )
             if not hmac.compare_digest(supplied_signature, expected_signature):
                 raise ValueError
-            payload = json.loads(_decode(encoded))
+            payload = json.loads(b64url_decode(encoded))
             expires_at = int(payload["exp"])
             kind = payload["kind"]
             if kind not in {"video", "image"} or expires_at < int(time.time()):

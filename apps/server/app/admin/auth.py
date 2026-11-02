@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import hmac
 import json
@@ -10,16 +9,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.admin.schemas import AdminLoginRequest, AdminSession
 from app.core.config import Settings, get_settings
+from app.core.encoding import b64url_decode, b64url_encode
 
 bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def _encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
-
-
-def _decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
 def create_admin_session(credentials: AdminLoginRequest, settings: Settings) -> AdminSession:
@@ -29,8 +21,10 @@ def create_admin_session(credentials: AdminLoginRequest, settings: Settings) -> 
         raise HTTPException(status_code=401, detail="账号或密码错误")
 
     expires_at = int(time.time()) + settings.admin_token_ttl_seconds
-    payload = _encode(json.dumps({"sub": settings.admin_username, "exp": expires_at}).encode())
-    signature = _encode(
+    payload = b64url_encode(
+        json.dumps({"sub": settings.admin_username, "exp": expires_at}).encode()
+    )
+    signature = b64url_encode(
         hmac.new(settings.admin_token_secret.encode(), payload.encode(), hashlib.sha256).digest()
     )
     return AdminSession(
@@ -49,14 +43,14 @@ def require_admin(
 
     try:
         payload, signature = credentials.credentials.split(".", 1)
-        expected = _encode(
+        expected = b64url_encode(
             hmac.new(
                 settings.admin_token_secret.encode(), payload.encode(), hashlib.sha256
             ).digest()
         )
         if not hmac.compare_digest(signature, expected):
             raise ValueError
-        claims = json.loads(_decode(payload))
+        claims = json.loads(b64url_decode(payload))
         if claims.get("sub") != settings.admin_username or int(claims.get("exp", 0)) < time.time():
             raise ValueError
     except (ValueError, TypeError, json.JSONDecodeError):

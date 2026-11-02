@@ -33,6 +33,7 @@ import type {
   RequestLogPage,
   RequestLogQuery,
 } from "../types";
+import type { AdminSection } from "../router";
 
 const props = defineProps<{
   config: CodexWatchConfig;
@@ -64,7 +65,6 @@ const emit = defineEmits<{
   refreshRequestLogs: [query?: RequestLogQuery];
 }>();
 
-type SectionId = "crawler" | "tutorials" | "community" | "reminder-settings" | "reminders" | "deployment" | "logs";
 const route = useRoute();
 const router = useRouter();
 const keywordInput = ref("");
@@ -86,7 +86,7 @@ const operationsSections = [
 ];
 const sections = [...intelligenceSections, ...operationsSections];
 
-const activeSection = computed<SectionId>(() => (route.meta.section as SectionId | undefined) ?? "crawler");
+const activeSection = computed<AdminSection>(() => (route.meta.section as AdminSection | undefined) ?? "crawler");
 const current = computed(() => sections.find((item) => item.id === activeSection.value)!);
 const communityVisible = computed(() => Boolean(props.config.community?.qrCode));
 const isOperations = computed(() => operationsSections.some((item) => item.id === activeSection.value));
@@ -100,8 +100,9 @@ const activeReminderCount = computed(() => props.reminderSubscriptions.filter(
   (item) => item.isCurrentTemplate && item.remainingDeliveries > 0,
 ).length);
 
-function selectSection(section: SectionId) {
-  router.push(section === "crawler" ? "/codex-watch/crawler" : section === "tutorials" ? "/codex-watch/tutorials" : section === "community" ? "/codex-watch/community" : section === "reminder-settings" ? "/codex-watch/reminder-settings" : section === "reminders" ? "/ops/reminders" : section === "logs" ? "/ops/request-logs" : "/ops/deployment");
+function selectSection(section: AdminSection) {
+  // Route names match section ids (see router.ts).
+  router.push({ name: section });
   if (section === "logs") refreshRequestLogs();
 }
 
